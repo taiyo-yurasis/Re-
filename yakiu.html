@@ -45,8 +45,6 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 .setting-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;text-align:left;font-size:13px;display:flex;flex-direction:column;gap:6px}
 .setting-row{display:flex;align-items:center;gap:6px}
 .setting-row span{width:70px;font-weight:700;color:var(--mut)}
-.setting-row input[type="range"]{flex:1}
-.setting-row small{width:36px;text-align:right;font-weight:700;color:var(--acc)}
 #code{flex:1;min-width:0;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-size:16px}
 #hint{display:none;flex:1;flex-direction:column;justify-content:center;gap:6px;font-size:13px;line-height:1.6;color:var(--mut)}
 #hint b{color:var(--ink)}
@@ -100,24 +98,10 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
    <button class="bt sm" data-bs="left">左のみ</button>
    <button class="bt sm" data-bs="random">左右ランダム</button>
   </div>
- </div>
-
- <div class="setting-box" id="debug-settings-box">
-  <div style="font-weight:700;color:var(--ink);margin-bottom:2px">⚙️ オフライン詳細設定 (自動保存)</div>
-  <div class="setting-row">
-   <span>カーソル:</span>
-   <input type="range" id="rng-cursor" min="10" max="25" value="16">
-   <small id="val-cursor">16</small>
-  </div>
-  <div class="setting-row">
-   <span>FP(通常):</span>
-   <input type="range" id="rng-fp-fly" min="0" max="0.5" step="0.05" value="0.22">
-   <small id="val-fp-fly">22%</small>
-  </div>
-  <div class="setting-row">
-   <span>FP(ヒット):</span>
-   <input type="range" id="rng-fp-hit" min="0" max="0.5" step="0.05" value="0.15">
-   <small id="val-fp-hit">15%</small>
+  <div class="setting-row" id="cpu-order-row">
+   <span>CPU戦:</span>
+   <button class="bt sm on" data-cpu-first="1">先攻</button>
+   <button class="bt sm" data-cpu-first="0">後攻</button>
   </div>
  </div>
 
@@ -134,7 +118,7 @@ const BS=[0,{x:311,y:304},{x:240,y:234},{x:169,y:304}];
 const FD=[[240,292],[240,392],[322,300],[285,245],[195,245],[158,300],[120,170],[240,125],[360,170]];
 
 const TY={
- s:{d:1050,j:8},
+ s:{d:930,j:8},
  sl:{d:1150,j:10},
  c:{d:1500,j:12},
  f:{d:1250,j:16},
@@ -151,43 +135,14 @@ const TY_NAMES = {
  cu: 'チェンジアップ'
 };
 
-/* ---- 設定管理 & LocalStorage ---- */
-const DEFAULT_CONFIG = {
- cursorSize: 16,
- finePlayFly: 0.22,
- finePlayHit: 0.15
-};
-let CONFIG = { ...DEFAULT_CONFIG };
-
-function loadConfig() {
- const saved = localStorage.getItem('stadium_debug_config');
- if (saved) {
-  try { CONFIG = { ...DEFAULT_CONFIG, ...JSON.parse(saved) }; } catch (e) { CONFIG = { ...DEFAULT_CONFIG }; }
- }
- syncConfigUI();
-}
-function saveConfig() {
- localStorage.setItem('stadium_debug_config', JSON.stringify(CONFIG));
-}
-function syncConfigUI() {
- $('rng-cursor').value = CONFIG.cursorSize;
- $('val-cursor').textContent = CONFIG.cursorSize;
- $('rng-fp-fly').value = CONFIG.finePlayFly;
- $('val-fp-fly').textContent = Math.round(CONFIG.finePlayFly * 100) + '%';
- $('rng-fp-hit').value = CONFIG.finePlayHit;
- $('val-fp-hit').textContent = Math.round(CONFIG.finePlayHit * 100) + '%';
-}
-loadConfig();
-
-$('rng-cursor').addEventListener('input', e => { CONFIG.cursorSize = +e.target.value; $('val-cursor').textContent = CONFIG.cursorSize; saveConfig(); });
-$('rng-fp-fly').addEventListener('input', e => { CONFIG.finePlayFly = +e.target.value; $('val-fp-fly').textContent = Math.round(CONFIG.finePlayFly * 100) + '%'; saveConfig(); });
-$('rng-fp-hit').addEventListener('input', e => { CONFIG.finePlayHit = +e.target.value; $('val-fp-hit').textContent = Math.round(CONFIG.finePlayHit * 100) + '%'; saveConfig(); });
+/* ---- 固定ゲーム設定 ---- */
+const CONFIG = { cursorSize: 16, finePlayFly: 0.22, finePlayHit: 0.1 };
 
 let G={id:0};
 const later=(ms,fn)=>{const id=G.id;setTimeout(()=>{if(G.id===id)fn()},ms)};
 const tot=t=>G.runs[t].reduce((a,b)=>a+b,0);
 const batHuman=()=>G.pvp||G.top,pitHuman=()=>G.pvp||!G.top;
-const dist=p=>{const m=Math.max(Math.abs(p.x-110),Math.abs(p.y-110))/66;return m<=.4?0:m<=1?1:m<=1.5?2:3};
+const dist=p=>{const [x,y]=bp(p,1),m=Math.max(Math.abs(x-110),Math.abs(y-110))/66;return m<=.4?0:m<=1?1:m<=1.5?2:3};
 
 /* ---- stadium background (drawn once) ---- */
 const bg=document.createElement('canvas');bg.width=480;bg.height=400;
@@ -210,6 +165,23 @@ const bg=document.createElement('canvas');bg.width=480;bg.height=400;
 
 /* ---- drawing ---- */
 function dot(x,y,r,f,s){cx.beginPath();cx.arc(x,y,r,0,7);cx.fillStyle=f;cx.fill();if(s){cx.strokeStyle=s;cx.lineWidth=2;cx.stroke()}}
+const SPIN={s:{turns:4,axis:'screen'},sl:{turns:-3,axis:'screen'},c:{turns:3.2,axis:'screen'},f:{turns:-.18,axis:'vertical'},sh:{turns:2.8,axis:'horizontal'},cu:{turns:-1.3,axis:'screen'}};
+function spinState(p,t){const s=SPIN[p.type]||SPIN.s,turns=p.type==='sh'?-Math.sign(p.sg||1)*Math.abs(s.turns):s.turns;return{angle:2*P*turns*cl(t,0,1),axis:s.axis}}
+function baseball(c,x,y,r,spin){
+ const {angle,axis}=spin;c.save();c.translate(x,y);
+ const shade=c.createRadialGradient(-r*.3,-r*.38,r*.08,0,0,r*1.15);shade.addColorStop(0,'#fff');shade.addColorStop(.72,'#fffdf6');shade.addColorStop(1,'#dedbd2');
+ c.beginPath();c.arc(0,0,r,0,2*P);c.fillStyle=shade;c.fill();
+ c.strokeStyle='#c9c6be';c.lineWidth=Math.max(.55,r*.045);c.stroke();c.clip();
+ const drawSeams=()=>{c.strokeStyle='#c83e42';c.lineWidth=Math.max(.75,r*.065);c.lineCap='round';c.lineJoin='round';
+  for(const sign of [-1,1]){c.beginPath();c.moveTo(sign*r*.55,-r*.83);c.bezierCurveTo(sign*r*.91,-r*.52,sign*r*.91,r*.52,sign*r*.55,r*.83);c.stroke()}
+  if(r>=8){c.lineWidth=Math.max(.65,r*.045);for(let i=0;i<7;i++){
+   const t=(i+.5)/7,yy=(t-.5)*r*1.52,sn=Math.sin(Math.PI*t),cs=Math.cos(Math.PI*t),xx=r*(.55+.22*sn),dx=r*.22*Math.PI*cs,dy=r*1.52,norm=Math.hypot(dx,dy),ln=r*.14;
+   for(const sign of [-1,1]){const tx=sign*xx,ty=yy,ndx=dy/norm,ndy=-sign*dx/norm;c.beginPath();c.moveTo(tx-ndx*ln/2,ty-ndy*ln/2);c.lineTo(tx+ndx*ln/2,ty+ndy*ln/2);c.stroke()}
+  }}
+ };
+ c.rotate(angle+(axis==='vertical'?P/2:0));drawSeams();
+ c.restore()
+}
 const FSPD=.07;
 function fpos(i,now){const b=FD[i],f=G.fl;
  if(G.rl){const m=G.rl.moves.find(q=>q.i===i);if(m){const e=Math.min(1,Math.max(0,(now-G.rl.t0)/m.T)),k=1-(1-e)*(1-e);return[b[0]+(m.x-b[0])*k,b[1]+(m.y-b[1])*k]}}
@@ -278,7 +250,7 @@ function drawField(now){
   cx.stroke();
  }
 
- if(G.phase==='pitch'&&G.pitch)dot(240,292+80*cl(G.pitch.t||0,0,1),3.5,'#fff');
+ if(G.phase==='pitch'&&G.pitch){const t=cl(G.pitch.t||0,0,1),[px]=bp(G.pitch,t);baseball(cx,240+(px-110)*.45,292+80*t,4.5,spinState(G.pitch,t))}
  if(G.fl&&!G.th){const f=G.fl,p=cl((now-f.t0)/f.dur,0,1),bk=f.wall?cl((now-f.t0-f.dur)/300,0,1)*16:0,ux=f.to.x-HP.x,uy=f.to.y-HP.y,ul=Math.hypot(ux,uy)||1,x=HP.x+ux*p-ux/ul*bk,y=HP.y+uy*p-uy/ul*bk;
   const h=f.kind==='ground'?Math.abs(Math.sin(p*P*5))*8*(1-p):f.h*4*p*(1-p);
   cx.fillStyle='rgba(0,0,0,.35)';cx.beginPath();cx.ellipse(x,y,5,2.5,0,0,7);cx.fill();
@@ -307,18 +279,20 @@ function throwPlan(to, targetBase){
  return {steps, mv};
 }
 
-function bp(p,t){const e=Math.min(t,1.2),u=Math.min(e,1),S={x:110,y:40};
- let x=S.x+(p.x-S.x)*e,y=S.y+(p.y-S.y)*(e<=1?Math.pow(e,2.2):1+(e-1)*2.2);
- if(p.type==='c'){
-  x+=p.sg*24*Math.sin(P*Math.pow(u,.7));
- }else if(p.type==='sl'){
-  x+=p.sg*16*Math.sin(P*Math.pow(u,.9));
- }else if(p.type==='sh'){
-  x-=p.sg*16*Math.sin(P*Math.pow(u,.9));
- }else if(p.type==='f'){
-  y=S.y+(p.y-S.y)*(e<=1?Math.pow(e,2.2):1+(e-1)*2.2);
+function resetPitchOffset(){const j=TY[G.sel].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());G.aimOffset={x:r*Math.cos(a),y:r*Math.sin(a)}}
+function pitchTarget(){const o=G.aimOffset||{x:0,y:0},team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x+o.x,0,220),y:cl(G.cur.y+o.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
+function bp(p,t){
+ const u=cl(t,0,1),hand=p.sg||1,S={x:110-hand*12,y:40},br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2);
+ let x=S.x+(p.x-S.x)*u,y=S.y+(p.y-S.y)*u;
+ switch(p.type){
+  case 'sl': x+=hand*(42*Math.pow(u,6)-18*Math.sin(P*u)); break;
+  case 'c': x-=hand*23*br;y+=52*late-13*Math.sin(P*u);break;
+  case 'f': y+=52*late;break;
+  case 'sh': x-=hand*30*late;break;
+  case 'cu': x+=hand*6*br;y+=11*br;break;
  }
- return[x,y]}
+ return[x,y]
+}
 
 function drawZone(){const u=44,c=zx;
  c.fillStyle='#0f1a33';c.fillRect(0,0,220,220);
@@ -329,10 +303,10 @@ function drawZone(){const u=44,c=zx;
  const p=G.pitch;
  if(p&&(G.phase==='pitch'||G.phase==='busy')){const t=cl(p.t,0,1.2),[x,y]=bp(p,t),r=3+16*Math.min(t,1.1);
   c.strokeStyle='rgba(255,210,63,.6)';c.lineWidth=2;c.beginPath();c.arc(x,y,19,0,7);c.stroke();
-  c.fillStyle='#fff';c.beginPath();c.arc(x,y,r,0,7);c.fill();
-  c.strokeStyle='#d33';c.lineWidth=1.5;c.beginPath();c.arc(x,y,r*.7,.5,2.3);c.stroke()}
+  baseball(c,x,y,r,spinState(p,t))}
  
- const q=G.cur,aimM=G.phase==='aim'&&canPit(),rr=aimM?TY[G.sel].j:CONFIG.cursorSize;
+ const aimM=G.phase==='aim'&&canPit(),rr=aimM?TY[G.sel].j:CONFIG.cursorSize;let q=G.cur;
+ if(aimM){const preview=pitchTarget(),[ex,ey]=bp(preview,1);q={x:ex,y:ey};c.save();c.beginPath();for(let i=0;i<=24;i++){const[x,y]=bp(preview,i/24);if(i===0)c.moveTo(x,y);else c.lineTo(x,y)}c.setLineDash([4,4]);c.strokeStyle='rgba(94,240,255,.75)';c.lineWidth=2;c.stroke();c.setLineDash([]);c.beginPath();c.arc(ex,ey,4,0,7);c.fillStyle='rgba(94,240,255,.85)';c.fill();c.restore()}
  if(!aimM&&!(canBat()&&G.phase!=='idle'&&G.phase!=='over'&&G.phase!=='sent'))return;
  c.strokeStyle='#5ef0ff';c.lineWidth=2;c.beginPath();c.arc(q.x,q.y,rr,0,7);c.stroke();
  c.beginPath();c.moveTo(q.x-rr-6,q.y);c.lineTo(q.x+rr+6,q.y);c.moveTo(q.x,q.y-rr-6);c.lineTo(q.x,q.y+rr+6);c.stroke()
@@ -362,24 +336,20 @@ function updateHud(){
 /* ---- game flow ---- */
 let cfgPitcher = 1;
 let cfgBatter = 'right';
+let cfgCpuFirst = true;
+function openingTop(mode,randomTop=Math.random()<.5){return mode===0?cfgCpuFirst:mode===2?randomTop:true}
 
-function newGame(N,pvp,isOnline){
+function newGame(N,pvp,opening= true){
  const pHand = cfgPitcher;
  const bSide1 = cfgBatter === 'random' ? (Math.random() < 0.5 ? 'right' : 'left') : cfgBatter;
  const bSide2 = cfgBatter === 'random' ? (Math.random() < 0.5 ? 'right' : 'left') : cfgBatter;
-
- if (isOnline) {
-  CONFIG = { ...DEFAULT_CONFIG };
- } else {
-  loadConfig();
- }
 
  G={
   id:G.id+1,
   N,
   pvp:!!pvp,
   inn:1,
-  top:true,
+  top:opening,
   outs:0,
   cnt:{b:0,s:0},
   bases:[0,0,0,0],
@@ -407,7 +377,7 @@ function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitc
    const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];let x,y;
    if(Math.random()<.62){x=rnd(52,168);y=rnd(52,168)}else{x=rnd(20,200);y=rnd(20,200)}
    throwP(t,x,y)})}
- else{G.phase='aim';setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
+ else{G.phase='aim';resetPitchOffset();setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
 function throwP(t,x,y){
  const defTeam = G.top ? 1 : 0;
@@ -690,7 +660,7 @@ function hit(k, ms) {
      mvs.push({a:0, b:1}); nb[1] = 1;
      targetBaseForThrow = 4;
     } else {
-     const to3rd = n === 3 || Math.random() < 0.5;
+     const to3rd = n === 3;
      mvs.push({a:0, b: to3rd ? 3 : 2}); nb[to3rd ? 3 : 2] = 1;
      targetBaseForThrow = 4;
     }
@@ -709,7 +679,7 @@ function hit(k, ms) {
      targetBaseForThrow = 4;
     } else {
      r++; mvs.push({a:2, b:4});
-     const b3Target = n === 3 ? 3 : (Math.random() < 0.3 ? 3 : 2);
+     const b3Target = n === 3 ? 3 : 2;
      mvs.push({a:0, b: b3Target}); nb[b3Target] = 1;
      targetBaseForThrow = 4;
     }
@@ -728,7 +698,7 @@ function hit(k, ms) {
      mvs.push({a:0, b:1}); nb[1] = 1;
     } else {
      r++; mvs.push({a:1, b:4});
-     const batTarget = n === 3 ? 3 : (Math.random() < 0.3 ? 3 : 2);
+     const batTarget = n === 3 ? 3 : 2;
      mvs.push({a:0, b: batTarget}); nb[batTarget] = 1;
      targetBaseForThrow = 4;
     }
@@ -748,7 +718,7 @@ function hit(k, ms) {
      mvs.push({a:0, b:1}); nb[1] = 1;
     } else {
      r++; mvs.push({a:1, b:4});
-     const batTarget = n === 3 ? 3 : (Math.random() < 0.3 ? 3 : 2);
+     const batTarget = n === 3 ? 3 : 2;
      mvs.push({a:0, b: batTarget}); nb[batTarget] = 1;
      targetBaseForThrow = 4;
     }
@@ -774,7 +744,7 @@ function hit(k, ms) {
      } else {
       mvs.push({a:1, b:3}); nb[3] = 1;
      }
-     const batTarget = n === 3 ? 3 : (Math.random() < 0.4 ? 3 : 2);
+     const batTarget = n === 3 ? 3 : 2;
      mvs.push({a:0, b: batTarget}); nb[batTarget] = 1;
      targetBaseForThrow = 4;
     }
@@ -793,17 +763,16 @@ function hit(k, ms) {
      }
      mvs.push({a:0, b:1}); nb[1] = 1;
      targetBaseForThrow = 4;
-    } else {
-     r++; mvs.push({a:3, b:4});
+   } else {
+     // With runners on every base, doubles score the runners from second and third;
+     // triples score all runners. The batter takes the corresponding base.
      r++; mvs.push({a:2, b:4});
-     const r1Home = Math.random() < 0.75;
-     if (r1Home) {
+     if (n === 3) {
       r++; mvs.push({a:1, b:4});
      } else {
       mvs.push({a:1, b:3}); nb[3] = 1;
      }
-     const batTarget = n === 3 ? 3 : 2;
-     mvs.push({a:0, b: batTarget}); nb[batTarget] = 1;
+     mvs.push({a:0, b:n}); nb[n] = 1;
      targetBaseForThrow = 4;
     }
     break;
@@ -856,7 +825,7 @@ function endHalf(){
 
 function over(){G.over=true;G.phase='over';const a=tot(0),b=tot(1);
  $('ovt').textContent=G.pvp?(a>b?'🎉 P1の勝ち!':a<b?'🎉 P2の勝ち!':'🤝 引き分け'):a>b?'🎉 勝利!':a<b?(G.walkoff?'😢 サヨナラ負け…':'😢 敗北…'):'🤝 引き分け';
- $('ovs').textContent=G.pvp?`P1 ${a} - ${b} P2`:`あなた ${a} - ${b} CPU`;$('ov').style.display='flex';$('debug-settings-box').style.display = pvpSel === 2 ? 'none' : 'block';
+ $('ovs').textContent=G.pvp?`P1 ${a} - ${b} P2`:`あなた ${a} - ${b} CPU`;$('ov').style.display='flex';
 }
 
 /* ---- input ---- */
@@ -864,9 +833,9 @@ const setCur=(x,y)=>{G.cur.x=cl(x,0,220);G.cur.y=cl(y,0,220)};
 const zpt=e=>{const r=zc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*220,(e.clientY-r.top)/r.height*220]};
 const fpt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*220,(e.clientY-r.top)/r.height*220]};
 
-function pitchNow(){if(G.phase!=='aim'||!canPit())return;const j=TY[G.sel].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random()),x=cl(G.cur.x+r*Math.cos(a),0,220),y=cl(G.cur.y+r*Math.sin(a),0,220);
- if(G.net==='guest'){G.phase='sent';G.sentAt=performance.now();send('throw',{type:G.sel,x,y});return}
- throwP(G.sel,x,y)}
+function pitchNow(){if(G.phase!=='aim'||!canPit())return;const target=pitchTarget();
+ if(G.net==='guest'){G.phase='sent';G.sentAt=performance.now();send('throw',{type:G.sel,x:target.x,y:target.y});return}
+ throwP(G.sel,target.x,target.y)}
 function act(){if(G.phase==='aim'){if(pitHuman())pitchNow()}else swing()}
 let lastT=null,mdown=false;
 
@@ -894,7 +863,7 @@ addEventListener('pointerup',e=>{const w=e.pointerType==='mouse'?mdown:lastT;mdo
 addEventListener('pointercancel',()=>{lastT=null;mdown=false});
 $('sw').addEventListener('pointerdown',e=>{e.preventDefault();pitchNow()});
 
-document.querySelectorAll('.pt').forEach(b=>b.addEventListener('click',()=>{G.sel=b.dataset.t;updateHud()}));
+document.querySelectorAll('.pt').forEach(b=>b.addEventListener('click',()=>{G.sel=b.dataset.t;if(G.phase==='aim')resetPitchOffset();updateHud()}));
 $('tg1').addEventListener('click',()=>{
  $('tg1').classList.add('on');$('tg2').classList.remove('on');
  $('p_group1').style.display='flex';$('p_group2').style.display='none';
@@ -914,18 +883,22 @@ document.querySelectorAll('[data-bs]').forEach(b=>b.addEventListener('click',e=>
  e.target.classList.add('on');
  cfgBatter = e.target.dataset.bs;
 }));
+document.querySelectorAll('[data-cpu-first]').forEach(b=>b.addEventListener('click',e=>{
+ document.querySelectorAll('[data-cpu-first]').forEach(x=>x.classList.remove('on'));
+ e.target.classList.add('on');cfgCpuFirst=e.target.dataset.cpuFirst==='1';
+}));
 
 addEventListener('keydown',e=>{
  if(e.code==='Space'||e.key==='Enter'){e.preventDefault();act()}
 });
 document.querySelectorAll('#ov [data-n]').forEach(b=>b.addEventListener('click',()=>{
- $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel,false);startHalf()}));
+ $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel,openingTop(pvpSel));startHalf()}));
 
 let pvpSel=0,ck='';
 document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',()=>{
  pvpSel=+b.dataset.m;
  document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
- $('debug-settings-box').style.display = pvpSel === 2 ? 'none' : 'block';
+ $('cpu-order-row').style.display=pvpSel===0?'flex':'none';
 }));
 function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(G.top?'h':'p');if(k===ck)return;ck=k;
  $('pts').style.display=k==='p'?'flex':'none';$('sw').style.display=k==='p'?'':'none';$('hint').style.display=k==='h'?'flex':'none'}
@@ -947,7 +920,7 @@ function applySnap(s){if(G.net!=='guest')return;
  if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;$('ov').style.display='none'}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
  Object.assign(G,{N:s.N,inn:s.inn,top:s.top,outs:s.outs,cnt:s.cnt,bases:s.bases,runs:s.runs,hits:s.hits,walkoff:s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
- if(s.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
+ if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
  if(s.ph==='over'&&!G.over)over();
  if(s.p){if(!G.pitch||G.pitch.id!==s.p.id){G.pitch={...s.p,t0:n-s.p.age,t:0};G.cur={x:110,y:110}}if(s.p.fr!=null)G.pitch.t=s.p.fr}else G.pitch=null;
  if(s.f){if(!G.fl||G.fl.id!==s.f.id)G.fl={...s.f,t0:n-s.f.age}}else G.fl=null;
@@ -984,7 +957,7 @@ function netStart(rm){RM=rm;
  rm.on('snap',m=>{if(!m.isMe)applySnap(m.data)});
  rm.on('throw',m=>{const d=m.data;if(!m.isMe&&G.net==='host'&&G.phase==='aim'&&!canPit()&&d)throwP(d.type in TY?d.type:'s',cl(+d.x||110,0,220),cl(+d.y||110,0,220))});
  rm.on('swing',m=>{if(!m.isMe&&G.net==='host')remoteSwing(m.data)});
- rm.on('hello',m=>{if(!m.isMe&&G.net==='hosting'){$('ov').style.display='none';newGame(hostN,true,true);G.net='host';G.me=0;G.seq=0;G.gid=Math.random();startHalf()}})}
+ rm.on('hello',m=>{if(!m.isMe&&G.net==='hosting'){$('ov').style.display='none';newGame(hostN,true,openingTop(2));G.net='host';G.me=0;G.seq=0;G.gid=Math.random();startHalf()}})}
 
 async function hostRoom(N){$('ov').style.display='flex';
  const room=sbRoom();
@@ -998,9 +971,9 @@ $('jn').onclick=async()=>{const c=$('code').value.trim().toUpperCase();
  const room=sbRoom();
  if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
  let rm;try{rm=await room.join('yk'+c)}catch(e){$('ovs').textContent='部屋に入れなかった…(招待や権限を確認してね)';return}
- newGame(3,true,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);$('ovs').textContent='ホストを待ってる…';
+ newGame(3,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);$('ovs').textContent='ホストを待ってる…';
  const iv=setInterval(()=>{if(G.gid||G.net!=='guest')clearInterval(iv);else send('hello',1)},1000);send('hello',1)};
-newGame(3,false,false);updateHud();loop();
+newGame(3,false);updateHud();loop();
 </script>
 </body>
 </html>
