@@ -1,0 +1,13 @@
+/* core.js — 共通ヘルパー・フィールド定数・ゲーム状態 */
+const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rnd(a,b+1)),cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const cv=$('f'),cx=cv.getContext('2d'),zc=$('z'),zx=zc.getContext('2d');
+const HP={x:240,y:375},R=320,P=Math.PI,TC=['#ff5a5f','#4da3ff'];
+const BS=[0,{x:311,y:304},{x:240,y:234},{x:169,y:304}];
+const FD=[[240,292],[240,392],[322,300],[285,245],[195,245],[158,300],[120,170],[240,125],[360,170]];
+
+let pid=0;
+let G={id:0};
+const later=(ms,fn)=>{const id=G.id;setTimeout(()=>{if(G.id===id)fn()},ms)};
+const tot=t=>G.runs[t].reduce((a,b)=>a+b,0);
+const batHuman=()=>G.pvp||G.top,pitHuman=()=>G.pvp||!G.top;
+const dist=p=>{const [x,y]=bp(p,1),m=Math.max(Math.abs(x-110),Math.abs(y-110))/66;return m<=.4?0:m<=1?1:m<=1.5?2:3};
