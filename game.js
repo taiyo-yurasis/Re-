@@ -23,6 +23,7 @@ function newGame(N,pvp,opening=true,humanTeam=null,teamCfg=null){
   bases:[0,0,0,0],
   runs:[[],[]],
   hits:[0,0],
+  pts:[0,0],
   phase:'idle',
   pitch:null,
   sel:'s',
@@ -66,7 +67,10 @@ function endHalf(){
  });
 }
 
-function over(){G.over=true;G.phase='over';const a=tot(0),b=tot(1);
- $('ovt').textContent=G.pvp?(a>b?'🎉 ビジターの勝ち!':a<b?'🎉 ホームの勝ち!':'🤝 引き分け'):(a===b?'🤝 引き分け':(((a>b)===(G.humanTeam===0))?'🎉 勝利!':(G.humanTeam===0&&G.walkoff?'😢 サヨナラ負け…':'😢 敗北…')));
- $('ovs').textContent=G.pvp?`ビジター ${a} - ${b} ホーム`:`あなた ${tot(G.humanTeam)} - ${tot(1-G.humanTeam)} CPU`;$('ov').style.display='flex';
+function over(){G.over=true;G.phase='over';const a=tot(0),b=tot(1),tied=a===b;
+ const winner=tied?(G.pts[0]>=G.pts[1]?0:1):(a>b?0:1);
+ $('ovt').textContent=G.pvp?(winner===0?'🎉 ビジターの勝ち!':'🎉 ホームの勝ち!'):(winner===G.humanTeam?'🎉 勝利!':(G.humanTeam===0&&G.walkoff?'😢 サヨナラ負け…':'😢 敗北…'));
+ const scoreText=G.pvp?`ビジター ${a} - ${b} ホーム`:`あなた ${tot(G.humanTeam)} - ${tot(1-G.humanTeam)} CPU`;
+ const ptsText=tied?`試合pt: 先攻 ${G.pts[0]} - ${G.pts[1]} 後攻`:'';
+ $('ovs').textContent=scoreText+(ptsText?' / '+ptsText:'');$('ov').style.display='flex';
 }
