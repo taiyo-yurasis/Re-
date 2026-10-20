@@ -16,7 +16,8 @@ const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak'
 // p:投球 ms:ジャストとのズレ(負=早い) bx,by:その瞬間のボール位置 curX,curY:カーソル位置
 function batResult(p,ms,bx,by,curX,curY){
  const C=CONFIG,dd=Math.hypot(bx-curX,by-curY),d=dist(p);
- if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize||(d>=2&&Math.random()<C.farZoneMissRate))return {k:'miss'};
+ if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
+ if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
  const meet=meetOf(ms,dd),tier=tierOf(meet);
  const lift=(curY-by)/C.cursorSize,traj=lift>C.liftBand?'up':lift<-C.liftBand?'down':'flat';
  // 方向: タイミングだけで決まる(早い=引っ張り。右打者は画面左、左打者は右)。ミート度が低いほどブレる
