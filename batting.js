@@ -45,6 +45,6 @@ function cpuBat(){const p=G.pitch,d=dist(p),z=d<=1,rep=p.type===G.last;G.last=p.
  if(Math.random()>sw)return take();
  G.swingT=performance.now();
  const c=.72-(p.type==='c'||p.type==='cu'?.1:p.type==='f'?.14:0)-(d==1?.08:0)-(d>=2?.35:0)+(rep?.12:0);
- if(Math.random()>c)return result('miss', 0);
- result(Math.random()<CONFIG.cpuFoulRate?'foul':rollW(CONFIG.cpuHitTable), 0);
+ if(Math.random()>c)return result('miss', null);
+ result(Math.random()<CONFIG.cpuFoulRate?'foul':rollW(CONFIG.cpuHitTable), null);
 }
