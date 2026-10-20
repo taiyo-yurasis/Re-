@@ -9,5 +9,5 @@ let pid=0;
 let G={id:0};
 const later=(ms,fn)=>{const id=G.id;setTimeout(()=>{if(G.id===id)fn()},ms)};
 const tot=t=>G.runs[t].reduce((a,b)=>a+b,0);
-const batHuman=()=>G.net?(G.top?0:1)===G.me:G.pvp||(G.top?0:1)===G.humanTeam,pitHuman=()=>G.net?(G.top?1:0)===G.me:G.pvp||(G.top?1:0)!==G.humanTeam;
+const batHuman=()=>G.net?(G.top?0:1)===G.me:G.pvp||(G.top?0:1)===G.humanTeam,pitHuman=()=>G.net?(G.top?1:0)===G.me:G.pvp||(G.top?1:0)===G.humanTeam;
 const dist=p=>{const [x,y]=bp(p,1),m=Math.max(Math.abs(x-110),Math.abs(y-110))/66;return m<=.4?0:m<=1?1:m<=1.5?2:3};
