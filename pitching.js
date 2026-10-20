@@ -19,6 +19,8 @@ function bp(p,t){
 }
 
 function throwP(t,x,y){
+ t=typeof t==='string'&&Object.hasOwn(TY,t)?t:'s';
+ const pos=v=>{const n=Number(v);return Number.isFinite(n)?cl(n,0,220):110};x=pos(x);y=pos(y);
  const defTeam = G.top ? 1 : 0;
  const sgDir = G.pitcherHands ? G.pitcherHands[defTeam] : 1;
 
