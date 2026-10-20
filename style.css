@@ -34,7 +34,7 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 #ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,20,.9);padding:20px;z-index:5;overflow-y:auto}
 .card{max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;gap:8px;margin:auto}
 .card h2{margin:0;font-size:26px}
-.version{font-size:11px;color:var(--mut);text-align:center;opacity:.8}
+.version{font-size:15px;color:var(--mut);text-align:center;opacity:.8}
 .row{display:flex;gap:8px}.row .bt{flex:1}
 .setting-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;text-align:left;font-size:13px;display:flex;flex-direction:column;gap:6px}
 .setting-row{display:flex;align-items:center;gap:6px}
