@@ -74,8 +74,8 @@ async function hostRoom(N){
  if(waitingRoom)return;closeRoom();
  $('ov').style.display='flex';const room=sbRoom();
  if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
- const code=Math.random().toString(36).substring(2,8).toUpperCase();let rm;
- try{rm=await room.join('yk'+code)}catch(e){$('ovs').textContent='部屋を作れなかった。もう一度試してね';return}
+ const code=Math.random().toString(36).substring(2,8).toUpperCase();let rm;waitingRoom=true;document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block';
+ try{rm=await room.join('yk'+code)}catch(e){waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovs').textContent='部屋を作れなかった。もう一度試してね';return}
  hostN=N;roomCode=code;waitingRoom=true;G.net='hosting';netStart(rm);$('ovt').textContent='合言葉 '+code;$('ovs').textContent='相手にこの6桁を伝えて。入ってくるのを待ってるよ…';
  document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
 }
@@ -83,7 +83,8 @@ $('jn').onclick=async()=>{
  if(waitingRoom)return;
  const c=$('code').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(c)){$('ovs').textContent='合言葉を6桁で入れてね';return}
  closeRoom();const room=sbRoom();if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
- let rm;try{rm=await room.join('yk'+c)}catch(e){$('ovs').textContent='部屋に入れなかった…(招待や権限を確認してね)';return}
+ waitingRoom=true;document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block';
+ let rm;try{rm=await room.join('yk'+c)}catch(e){waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovs').textContent='部屋に入れなかった…(招待や権限を確認してね)';return}
  roomCode=c;newGame(3,true,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovs').textContent='ホストを待ってる…';
  helloTimer=setInterval(()=>{if(G.gid||G.net!=='guest'){clearInterval(helloTimer);helloTimer=null}else send('hello',{room:c})},1000);send('hello',{room:c});
  document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
