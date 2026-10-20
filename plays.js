@@ -128,7 +128,7 @@ function result(k,ms,info){const c=G.cnt;
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false);
   if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true);
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
-  if(dp)G.bases[1]=0;if(!end)r=advRand('gr',false);
+  if(dp)G.bases[1]=0;if(!end)r=advRand('gr',false);else if(G.outs===2)adv(1,false);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
    G.outs++;let m='ゴロアウト';if(dp){G.outs++;m='ダブルプレー!'}
    score(r);
@@ -157,7 +157,8 @@ function result(k,ms,info){const c=G.cnt;
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'fly',()=>{
    G.outs++;
    let m = isFinePlay ? 'ファインプレー!!' : 'フライアウト';
-   if(!isFinePlay&&G.outs<3){const C=CONFIG;let sf=false;
+   if(G.outs>=3)adv(1,false);
+   else if(!isFinePlay){const C=CONFIG;let sf=false;
     if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);score(1);sf=true;m='犠牲フライ!'}
     if(G.bases[2]&&!G.bases[3]&&d>=C.tagUpDepth&&Math.random()<C.tagUpSecondRate){G.bases[2]=0;mvAdd({a:2,b:3});G.bases[3]=1;G.mv.stay=G.mv.stay.filter(x=>x!==2);if(!sf)m='タッチアップ!'}}
    banner(m, isFinePlay ? 'hr' : '');
