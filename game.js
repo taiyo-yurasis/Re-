@@ -39,7 +39,7 @@ function newGame(N,pvp,opening=true,humanTeam=null){
 function startHalf(){G.outs=0;G.bases=[0,0,0,0];G.cnt={b:0,s:0};G.runs[G.top?0:1][G.inn-1]=0;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='idle';
  banner(`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
 function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
- if(!pitHuman()){setMsg('カーソルをボールに合わせて、離した瞬間にスイング!');
+ if(!G.net&&!pitHuman()){setMsg('カーソルをボールに合わせて、離した瞬間にスイング!');
   later(rnd(700,1300),()=>{
    const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];let x,y;
    if(Math.random()<.62){x=rnd(52,168);y=rnd(52,168)}else{x=rnd(20,200);y=rnd(20,200)}
@@ -47,7 +47,7 @@ function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitc
  else{G.phase='aim';resetPitchOffset();setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
 function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;
- if(G.net==='guest')return;if(batHuman()){const limit=1+CONFIG.timingWindowMs/p.dur+(G.net?500/p.dur:0);if(p.t>limit){G.phase='busy';take()}}
+ if(G.net==='guest')return;if(G.net||batHuman()){const limit=1+CONFIG.timingWindowMs/p.dur+(G.net&&!canBat()?500/p.dur:0);if(p.t>limit){G.phase='busy';take()}}
  else if(p.t>=.98){G.phase='busy';cpuBat()}}
 function take(){result(dist(G.pitch)<=1?'look':'ball')}
 
