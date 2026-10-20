@@ -129,7 +129,9 @@ function result(k,ms,info){const c=G.cnt;
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
   if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
+  const dpAdvancesSecond=!!(dp&&G.bases[2]&&!G.bases[3]);
   if(dp)G.bases[1]=0;if(!end)r=advRand('gr',false);else if(G.outs===2)adv(1,false);
+  if(dpAdvancesSecond){r=0;G.bases=[0,0,0,1];G.mv={id:++pid,t0:performance.now(),dur:580,moves:[{a:2,b:3}],stay:[]}}
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
    G.outs++;let m='ゴロアウト';if(dp){G.outs++;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}
    score(r);
