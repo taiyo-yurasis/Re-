@@ -28,6 +28,27 @@ function adv(n,bat){let r=0;const nb=[0,0,0,0],mvs=[],stay=[];
  if(bat){if(n>=4){r++;mvs.push({a:0,b:4})}else{let p=n;while(p>1&&nb[p])p--;nb[p]=1;mvs.push({a:0,b:p})}}
  G.bases=nb;G.mv=mvs.length?{id:++pid,t0:performance.now(),dur:Math.max(...mvs.map(m=>(m.b-m.a)*580)),moves:mvs,stay}:null;return r}
 
+// 打者が一塁セーフになるプレー用の進塁(エラー/内野安打)。走者は押し出される分だけ進む。T=全員の走塁時間(ms)。得点数を返す(加点は呼び出し側)
+function forceAdv(T){const B=G.bases,old=[1,2,3].filter(b=>B[b]),nb=[0,1,0,0],mvs=[{a:0,b:1,T}];let r=0;
+ if(B[1]){mvs.push({a:1,b:2,T});nb[2]=1;
+  if(B[2]){mvs.push({a:2,b:3,T});nb[3]=1;if(B[3]){r++;mvs.push({a:3,b:4,T})}}
+  else if(B[3])nb[3]=1;
+ }else{if(B[2])nb[2]=1;if(B[3])nb[3]=1}
+ G.bases=nb;G.mv={id:++pid,t0:performance.now(),dur:T,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};return r}
+
+// 打球がアウトにならず打者が一塁に残る: isHit=true→内野安打(安打+1)、false→エラー(安打にならない)
+// ゴロは野手がもたつく(送球が遅れる)ので、走者が先に一塁へ着く
+function safeAtFirst(kind,to,ms,isHit){
+ const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y),F=ground?300+d*3.2:500+d*2.6;
+ const T=F+(ground?630:500),r=forceAdv(T);
+ flight(to,ground?'ground':'fly',()=>{
+  if(isHit){G.hits[G.top?0:1]++;banner('内野安打!');showDetailMsg('ih',ms)}
+  else{banner('エラー!');showDetailMsg('err',ms)}
+  score(r);
+  if(ground&&G.fl)G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[1],dur:380,dly:200}],currentStep:0};
+  fin(800)},1);
+}
+
 function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let r=0;
  const nb=[0,0,0,0];
  if(B[1]){
@@ -68,6 +89,8 @@ function showDetailMsg(k, ms, info) {
   case 'fine': actionText = 'ファインプレーでアウト！'; break;
   case 'foul': actionText = 'ファウル'; break;
   case 'gr': actionText = 'ゴロアウト'; break;
+  case 'err': actionText = '野手のエラー！'; break;
+  case 'ih': actionText = '内野安打！'; break;
   case 'fly': actionText = 'フライアウト'; break;
   case '1B': actionText = 'ヒット！'; break;
   case '2B': actionText = 'ツーベース！'; break;
@@ -88,6 +111,9 @@ function result(k,ms,info){const c=G.cnt;
   banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
   showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return}
  if(k==='gr'){const a=rnd(-35,35)*P/180,d=rnd(70,130);banner('ゴロ!');
+  const roll=Math.random(),gto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
+  if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false);
+  if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true);
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
   if(dp)G.bases[1]=0;if(!end)r=adv(1,false);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
@@ -111,6 +137,7 @@ function result(k,ms,info){const c=G.cnt;
    banner(m);showDetailMsg('gr', ms);fin(800)},1);
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return}
  if(k==='fly'){const a=rnd(-38,38)*P/180,d=rnd(160,270);banner('フライ!');
+  if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',{x:240+d*Math.sin(a),y:375-d*Math.cos(a)},ms,false);
   
   const isFinePlay = Math.random() < CONFIG.finePlayFly;
   
