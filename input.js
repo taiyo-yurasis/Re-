@@ -68,5 +68,5 @@ document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',
  document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
  $('cpu-order-row').style.display=pvpSel===0?'flex':'none';
 }));
-function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(G.top?'h':'p');if(k===ck)return;ck=k;
+function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(pitHuman()?'p':'h');if(k===ck)return;ck=k;
  $('pts').style.display=k==='p'?'flex':'none';$('sw').style.display=k==='p'?'':'none';$('hint').style.display=k==='h'?'flex':'none'}
