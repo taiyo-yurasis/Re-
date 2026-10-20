@@ -3,12 +3,13 @@ let cfgPitcher = 1;
 let cfgBatter = 'right';
 let cfgCpuFirst = true;
 function openingTop(){return true}
+const pickBatterSide=s=>s==='random'?(Math.random()<0.5?'right':'left'):s;
+function selectNextBatterSide(team=G.top?0:1){G.batterSides[team]=pickBatterSide(G.batterModes[team])}
 
 function newGame(N,pvp,opening=true,humanTeam=null,teamCfg=null){
  const human = pvp ? (humanTeam===0||humanTeam===1?humanTeam:0) : (cfgCpuFirst?0:1);
  // チームごとの設定(オンライン時は teamCfg で [チーム0, チーム1] の投げ手/打席を渡す。無ければ自分の設定を両チームに使う)
  const cfgs = teamCfg || [{ph:cfgPitcher,bs:cfgBatter},{ph:cfgPitcher,bs:cfgBatter}];
- const pickSide = s => s === 'random' ? (Math.random() < 0.5 ? 'right' : 'left') : s;
 
  G={
   id:G.id+1,
@@ -32,11 +33,12 @@ function newGame(N,pvp,opening=true,humanTeam=null,teamCfg=null){
   walkoff:false,
   cur:{x:110,y:110},
   pitcherHands: [cfgs[0].ph, cfgs[1].ph],
-  batterSides: [pickSide(cfgs[0].bs), pickSide(cfgs[1].bs)]
+  batterModes: [cfgs[0].bs, cfgs[1].bs],
+  batterSides: [pickBatterSide(cfgs[0].bs), pickBatterSide(cfgs[1].bs)]
  }
 }
 
-function startHalf(){G.outs=0;G.bases=[0,0,0,0];G.cnt={b:0,s:0};G.runs[G.top?0:1][G.inn-1]=0;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='idle';
+function startHalf(){selectNextBatterSide();G.outs=0;G.bases=[0,0,0,0];G.cnt={b:0,s:0};G.runs[G.top?0:1][G.inn-1]=0;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='idle';
  banner(`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
 function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
  if(!G.net&&!pitHuman()){setMsg('カーソルをボールに合わせて、離した瞬間にスイング!');
