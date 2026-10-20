@@ -13,7 +13,7 @@ function throwPlan(to, targetBase){
 function flight(to,kind,cb,out,o){const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6;
  G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,h:kind==='hr'?130:30+d*.35,...(o||{})};sync();later(dur+250,cb)}
 function next(ms){updateHud();later(ms,ready)}
-function fin(ms){if(G.th&&G.th.steps)ms=Math.max(ms,G.th.steps.reduce((a,q)=>a+(q.dly||0)+q.dur,0)-(performance.now()-G.th.t0)+400);if(G.mv)ms=Math.max(ms,G.mv.dur-(performance.now()-G.mv.t0)+350);G.cnt={b:0,s:0};updateHud();
+function fin(ms){if(G.th&&G.th.steps)ms=Math.max(ms,G.th.steps.reduce((a,q)=>a+(q.dly||0)+q.dur,0)-(performance.now()-G.th.t0)+400);if(G.mv)ms=Math.max(ms,G.mv.dur-(performance.now()-G.mv.t0)+350);G.cnt={b:0,s:0};if(!G.walkoff&&G.outs<3)selectNextBatterSide();updateHud();
  if(G.walkoff)return later(Math.max(1500,ms),over);
  if(G.outs>=3)return later(ms+300,endHalf);
  later(ms,ready)}
