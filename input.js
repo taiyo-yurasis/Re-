@@ -8,25 +8,33 @@ function act(){if(G.phase==='aim'){if(pitHuman())pitchNow()}else swing()}
 let lastT=null,mdown=false;
 
 function bind(el){
- el.addEventListener('pointerdown',e=>{e.preventDefault();
-  if(e.pointerType==='mouse'){
-   if(el===zc) setCur(...zpt(e));
-   else if(el===cv) setCur(...fpt(e));
-   if(G.phase==='aim') pitchNow(); else mdown=true;
-  } else {lastT=[e.clientX,e.clientY]}
+ el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')return;e.preventDefault();
+  if(el===zc) setCur(...zpt(e));
+  else if(el===cv) setCur(...fpt(e));
+  if(G.phase==='aim') pitchNow(); else mdown=true;
  });
  el.addEventListener('pointermove',e=>{
   if(e.pointerType==='mouse'){
    if(el===zc) setCur(...zpt(e));
    else if(el===cv) setCur(...fpt(e));
-  } else if(lastT){
-   const k=220/zc.getBoundingClientRect().width*1.6;
-   setCur(G.cur.x+(e.clientX-lastT[0])*k, G.cur.y+(e.clientY-lastT[1])*k);
-   lastT=[e.clientX,e.clientY];
   }
  });
 }
 bind(zc);bind(cv);
+/* タッチは画面全体をドラッグ開始領域にし、ボタン操作は除外する */
+const touchArea=$('app');
+touchArea.addEventListener('pointerdown',e=>{
+ if(e.pointerType==='mouse'||e.target.closest('button,input'))return;
+ e.preventDefault();
+ lastT=[e.clientX,e.clientY];
+ touchArea.setPointerCapture(e.pointerId);
+});
+touchArea.addEventListener('pointermove',e=>{
+ if(e.pointerType==='mouse'||!lastT)return;
+ const k=220/zc.getBoundingClientRect().width*1.6;
+ setCur(G.cur.x+(e.clientX-lastT[0])*k, G.cur.y+(e.clientY-lastT[1])*k);
+ lastT=[e.clientX,e.clientY];
+});
 addEventListener('pointerup',e=>{const w=e.pointerType==='mouse'?mdown:lastT;mdown=false;lastT=null;if(w&&batHuman()&&G.phase==='pitch')swing()});
 addEventListener('pointercancel',()=>{lastT=null;mdown=false});
 $('sw').addEventListener('pointerdown',e=>{e.preventDefault();pitchNow()});
