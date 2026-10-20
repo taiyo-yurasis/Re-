@@ -27,16 +27,17 @@ function validSnap(s){
  if(!s||typeof s!=='object'||!Number.isFinite(s.seq)||!Number.isInteger(s.inn)||s.inn<1||s.inn>20||typeof s.top!=='boolean'||!Number.isInteger(s.N)||s.N<1||s.N>20||!Number.isInteger(s.outs)||s.outs<0||s.outs>3)return false;
  if(!s.cnt||!Number.isInteger(s.cnt.b)||s.cnt.b<0||s.cnt.b>3||!Number.isInteger(s.cnt.s)||s.cnt.s<0||s.cnt.s>2)return false;
  if(!Array.isArray(s.bases)||s.bases.length!==4||s.bases.some(v=>v!==0&&v!==1))return false;
- if(!Array.isArray(s.runs)||s.runs.length!==2||s.runs.some(a=>!Array.isArray(a)||a.length>20||a.some(v=>v!=null&&(!Number.isFinite(Number(v))||Number(v)<0||Number(v)>999))))return false;
- if(!Array.isArray(s.hits)||s.hits.length!==2||s.hits.some(v=>!Number.isInteger(v)||v<0||v>999))return false;
- if(s.p&&(!Number.isFinite(s.p.dur)||s.p.dur<=0||!Number.isFinite(s.p.x)||!Number.isFinite(s.p.y)||!Number.isFinite(s.p.age)||!Number.isFinite(s.p.t===undefined?0:s.p.t)))return false;
+ if(!Array.isArray(s.runs)||s.runs.length!==2||s.runs.some(a=>!Array.isArray(a)||a.length>20||a.some(v=>v!=null&&(!Number.isFinite(Number(v))||!Number.isInteger(Number(v))||Number(v)<0||Number(v)>999))))return false;
+ if(!Array.isArray(s.hits)||s.hits.length!==2||s.hits.some(v=>!Number.isInteger(Number(v))||Number(v)<0||Number(v)>999))return false;
+ if(s.p&&(typeof s.p.type!=='string'||!Object.hasOwn(TY,s.p.type)||!Number.isFinite(Number(s.p.dur))||Number(s.p.dur)<=0||!Number.isFinite(Number(s.p.x))||Number(s.p.x)<0||Number(s.p.x)>220||!Number.isFinite(Number(s.p.y))||Number(s.p.y)<0||Number(s.p.y)>220||!Number.isFinite(Number(s.p.age))||Number(s.p.age)<0))return false;
+ if(!['idle','ready','aim','sent','pitch','busy','over'].includes(s.ph))return false;
  return true
 }
 function applySnap(s){
  if(G.net!=='guest'||!validSnap(s))return;
  if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;$('ov').style.display='none';if(Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
- Object.assign(G,{N:s.N,inn:s.inn,top:s.top,outs:s.outs,cnt:s.cnt,bases:s.bases,runs:s.runs,hits:s.hits,walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
+ Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
  if(s.ph==='over'&&!G.over)over();
  if(s.p){if(!G.pitch||G.pitch.id!==s.p.id)G.pitch={...s.p,t0:n-s.p.age,t:0};if(s.p.fr!=null)G.pitch.t=s.p.fr}else G.pitch=null;
