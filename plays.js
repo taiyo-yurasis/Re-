@@ -38,12 +38,12 @@ function forceAdv(T){const B=G.bases,old=[1,2,3].filter(b=>B[b]),nb=[0,1,0,0],mv
 
 // 打球がアウトにならず打者が一塁に残る: isHit=true→内野安打(安打+1)、false→エラー(安打にならない)
 // ゴロは野手がもたつく(送球が遅れる)ので、走者が先に一塁へ着く
-function safeAtFirst(kind,to,ms,isHit){
+function safeAtFirst(kind,to,ms,isHit,info){
  const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y),F=ground?300+d*3.2:500+d*2.6;
  const T=F+(ground?630:500),r=forceAdv(T);
  flight(to,ground?'ground':'fly',()=>{
-  if(isHit){G.hits[G.top?0:1]++;banner('内野安打!');showDetailMsg('ih',ms)}
-  else{banner('エラー!');showDetailMsg('err',ms)}
+  if(isHit){G.hits[G.top?0:1]++;banner('内野安打!');showDetailMsg('ih',ms,info)}
+  else{banner('エラー!');showDetailMsg('err',ms,info)}
   score(r);
   if(ground&&G.fl)G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[1],dur:380,dly:200}],currentStep:0};
   fin(800)},1);
@@ -81,38 +81,38 @@ function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let 
 function showDetailMsg(k, ms, info) {
  const p = G.pitch;
  const typeName = p && TY_NAMES[p.type] ? TY_NAMES[p.type] : '球種不明';
- 
- let timingText = '';
- if (ms != null) {
+ const actions = {
+  ball: 'ボール',
+  look: '見逃しストライク',
+  miss: '空振り',
+  fine: 'ファインプレーでアウト！',
+  foul: 'ファウル',
+  gr: 'ゴロアウト',
+  err: '野手のエラー！',
+  ih: '内野安打！',
+  fly: 'フライアウト',
+  '1B': 'ヒット！',
+  '2B': 'ツーベース！',
+  '3B': 'スリーベース！',
+  HR: 'ホームラン！！'
+ };
+ const parts = [typeName, actions[k] || k];
+ if (ms != null && Number.isFinite(ms)) {
   const absMs = Math.abs(ms);
-  let tEval = 'タイミング：完璧';
-  if (absMs >= CONFIG.labelNearMs) tEval = ms < 0 ? 'タイミング：早すぎ' : 'タイミング：遅すぎ';
-  else if (absMs >= CONFIG.labelPerfectMs) tEval = ms < 0 ? 'タイミング：少し早い' : 'タイミング：少し遅い';
-  const meetText = info && info.tier ? ` / ミート：${CONFIG.tierLabels[info.tier]}` : '';
-  timingText = `[ ${typeName} / ${tEval}${meetText} ] `;
- } else {
-  timingText = `[ ${typeName} ] `;
+  const timing = absMs >= CONFIG.labelNearMs
+   ? (ms < 0 ? '早すぎ' : '遅すぎ')
+   : absMs >= CONFIG.labelPerfectMs
+    ? (ms < 0 ? '少し早い' : '少し遅い')
+    : '完璧';
+  parts.push(`タイミング：${timing}`);
+  if (k === 'miss') parts.push('ミート：空振り');
+  else if (info && info.tier && CONFIG.tierLabels[info.tier]) parts.push(`ミート：${CONFIG.tierLabels[info.tier]}`);
  }
-
- let actionText = '';
- switch(k){
-  case 'ball': actionText = 'ボール'; break;
-  case 'look': actionText = '見逃しストライク'; break;
-  case 'miss': actionText = '空振り！'; break;
-  case 'fine': actionText = 'ファインプレーでアウト！'; break;
-  case 'foul': actionText = 'ファウル'; break;
-  case 'gr': actionText = 'ゴロアウト'; break;
-  case 'err': actionText = '野手のエラー！'; break;
-  case 'ih': actionText = '内野安打！'; break;
-  case 'fly': actionText = 'フライアウト'; break;
-  case '1B': actionText = 'ヒット！'; break;
-  case '2B': actionText = 'ツーベース！'; break;
-  case '3B': actionText = 'スリーベース！'; break;
-  case 'HR': actionText = 'ホームラン！！'; break;
-  default: actionText = k;
+ if (info && info.dir) {
+  const direction = {pull:'引っ張り',center:'センター',oppo:'流し'}[info.dir];
+  if (direction) parts.push(`方向：${direction}`);
  }
-
- setMsg(timingText + actionText);
+ setMsg(parts.join(' ｜ '));
 }
 
 function result(k,ms,info){const c=G.cnt;
@@ -125,8 +125,8 @@ function result(k,ms,info){const c=G.cnt;
   showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return}
  if(k==='gr'){const a=rnd(-35,35)*P/180,d=rnd(70,130);banner('ゴロ!');
   const roll=Math.random(),gto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
-  if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false);
-  if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true);
+  if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
+  if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
   if(dp)G.bases[1]=0;if(!end)r=advRand('gr',false);else if(G.outs===2)adv(1,false);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
@@ -147,10 +147,10 @@ function result(k,ms,info){const c=G.cnt;
      G.th = {id:++pid, t0:performance.now(), dur:380, from:G.fl.to, to:BS[1]};
     }
    }
-   banner(m);showDetailMsg('gr', ms);fin(800)},1);
+   banner(m);showDetailMsg('gr', ms, info);fin(800)},1);
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return}
  if(k==='fly'){const a=rnd(-38,38)*P/180,d=rnd(160,270);banner('フライ!');
-  if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',{x:240+d*Math.sin(a),y:375-d*Math.cos(a)},ms,false);
+  if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',{x:240+d*Math.sin(a),y:375-d*Math.cos(a)},ms,false,info);
   
   const isFinePlay = Math.random() < CONFIG.finePlayFly;
   
@@ -162,7 +162,7 @@ function result(k,ms,info){const c=G.cnt;
     if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);score(1);sf=true;m='犠牲フライ!'}
     if(G.bases[2]&&!G.bases[3]&&d>=C.tagUpDepth&&Math.random()<C.tagUpSecondRate){G.bases[2]=0;mvAdd({a:2,b:3});G.bases[3]=1;G.mv.stay=G.mv.stay.filter(x=>x!==2);if(!sf)m='タッチアップ!'}}
    banner(m, isFinePlay ? 'hr' : '');
-   showDetailMsg('fly', ms);
+   showDetailMsg('fly', ms, info);
    fin(1000);
   }, 1, isFinePlay ? {diving:true} : null);
   return;}
