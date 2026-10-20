@@ -20,8 +20,9 @@ const bg=document.createElement('canvas');bg.width=480;bg.height=400;
 
 /* ---- drawing ---- */
 function dot(x,y,r,f,s){cx.beginPath();cx.arc(x,y,r,0,7);cx.fillStyle=f;cx.fill();if(s){cx.strokeStyle=s;cx.lineWidth=2;cx.stroke()}}
-const SPIN={s:{turns:4,axis:'screen'},sl:{turns:-3,axis:'screen'},c:{turns:3.2,axis:'screen'},f:{turns:-.18,axis:'vertical'},sh:{turns:2.8,axis:'horizontal'},cu:{turns:-1.3,axis:'screen'}};
-function spinState(p,t){const s=SPIN[p.type]||SPIN.s,turns=p.type==='sh'?-Math.sign(p.sg||1)*Math.abs(s.turns):s.turns;return{angle:2*P*turns*cl(t,0,1),axis:s.axis}}
+/* RPMは実球種の平均値を参考にし、画面上では8%に縮尺して回転を見やすくする */
+const SPIN={s:{rpm:2241,axis:'screen'},sl:{rpm:-2333,axis:'screen'},c:{rpm:2445,axis:'screen'},f:{rpm:-800,axis:'vertical'},sh:{rpm:2164,axis:'horizontal'},cu:{rpm:-1746,axis:'screen'}};
+function spinState(p,t){const s=SPIN[p.type]||SPIN.s,d=(TY[p.type]||TY.s).d,rate=p.type==='sh'?-Math.sign(p.sg||1)*Math.abs(s.rpm):s.rpm,turns=rate*d/60000*.08;return{angle:2*P*turns*cl(t,0,1),axis:s.axis}}
 function baseball(c,x,y,r,spin){
  const {angle,axis}=spin;c.save();c.translate(x,y);
  const shade=c.createRadialGradient(-r*.3,-r*.38,r*.08,0,0,r*1.15);shade.addColorStop(0,'#fff');shade.addColorStop(.72,'#fffdf6');shade.addColorStop(1,'#dedbd2');
