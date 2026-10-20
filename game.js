@@ -46,7 +46,7 @@ function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitc
    throwP(t,x,y)})}
  else{G.phase='aim';resetPitchOffset();setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
-function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;p.t=(now-p.t0)/p.dur;
+function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;
  if(G.net==='guest')return;if(batHuman()){const limit=1+CONFIG.timingWindowMs/p.dur+(G.net?500/p.dur:0);if(p.t>limit){G.phase='busy';take()}}
  else if(p.t>=.98){G.phase='busy';cpuBat()}}
 function take(){result(dist(G.pitch)<=1?'look':'ball')}
