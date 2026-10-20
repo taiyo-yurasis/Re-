@@ -20,7 +20,7 @@ const send=(t,d)=>{if(RM)RM.emit(t,d).catch(()=>{})};
 const canBat=()=>G.net?(G.top?0:1)===G.me:batHuman(),canPit=()=>G.net?(G.top?1:0)===G.me:pitHuman();
 function snap(){
  const n=performance.now(),p=G.pitch,f=G.fl;
- return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves}}
+ return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves}}
 }
 let lastSync=0;const sync=()=>{const n=performance.now();if(G.net==='host'&&G.gid&&n-lastSync>110){lastSync=n;send('snap',snap())}};
 setInterval(sync,200);
@@ -30,6 +30,7 @@ function validSnap(s){
  if(!Array.isArray(s.bases)||s.bases.length!==4||s.bases.some(v=>v!==0&&v!==1))return false;
  if(!Array.isArray(s.runs)||s.runs.length!==2||s.runs.some(a=>!Array.isArray(a)||a.length>20||a.some(v=>v!=null&&(!Number.isFinite(Number(v))||!Number.isInteger(Number(v))||Number(v)<0||Number(v)>999))))return false;
  if(!Array.isArray(s.hits)||s.hits.length!==2||s.hits.some(v=>!Number.isInteger(Number(v))||Number(v)<0||Number(v)>999))return false;
+ if(s.pts!=null&&(!Array.isArray(s.pts)||s.pts.length!==2||s.pts.some(v=>!Number.isInteger(Number(v))||Number(v)<0)))return false;
  if(s.p&&(typeof s.p.type!=='string'||!Object.hasOwn(TY,s.p.type)||!Number.isFinite(Number(s.p.dur))||Number(s.p.dur)<=0||!Number.isFinite(Number(s.p.x))||Number(s.p.x)<0||Number(s.p.x)>220||!Number.isFinite(Number(s.p.y))||Number(s.p.y)<0||Number(s.p.y)>220||!Number.isFinite(Number(s.p.age))||Number(s.p.age)<0))return false;
  if(!['idle','ready','aim','sent','pitch','busy','over'].includes(s.ph))return false;
  return true
@@ -38,7 +39,7 @@ function applySnap(s){
  if(G.net!=='guest'||!validSnap(s))return;
  if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ov').style.display='none';if(Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
- Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
+ Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),pts:Array.isArray(s.pts)?s.pts.map(Number):[0,0],walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
  if(s.ph==='over'&&!G.over)over();
  if(s.p){if(!G.pitch||G.pitch.id!==s.p.id)G.pitch={...s.p,t0:n-s.p.age,t:0};if(s.p.fr!=null)G.pitch.t=s.p.fr}else G.pitch=null;
