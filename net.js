@@ -28,7 +28,7 @@ function applySnap(s){if(G.net!=='guest')return;
  $('msg').textContent=s.m;updateHud()}
 function remoteSwing(m){if(G.phase!=='pitch'||!m||typeof m.t!=='number')return;const p=G.pitch;p.t=m.t;G.phase='busy';G.swingT=performance.now();
  const ms=(m.t-1)*p.dur,[bx,by]=bp(p,p.t);
- result(batResult(p,ms,bx,by,m.x,m.y),ms)}
+ const r=batResult(p,ms,bx,by,m.x,m.y);result(r.k,ms,r)}
 
 function netStart(rm){RM=rm;
  rm.on('snap',m=>{if(!m.isMe)applySnap(m.data)});

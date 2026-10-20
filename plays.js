@@ -44,7 +44,7 @@ function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let 
  G.bases=[0,nb[1],nb[2],nb[3]];
  G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};score(r)}
 
-function showDetailMsg(k, ms) {
+function showDetailMsg(k, ms, info) {
  const p = G.pitch;
  const typeName = p && TY_NAMES[p.type] ? TY_NAMES[p.type] : '球種不明';
  
@@ -54,7 +54,8 @@ function showDetailMsg(k, ms) {
   let tEval = 'タイミング：完璧';
   if (absMs >= CONFIG.labelNearMs) tEval = ms < 0 ? 'タイミング：早すぎ' : 'タイミング：遅すぎ';
   else if (absMs >= CONFIG.labelPerfectMs) tEval = ms < 0 ? 'タイミング：少し早い' : 'タイミング：少し遅い';
-  timingText = `[ ${typeName} / ${tEval} ] `;
+  const meetText = info && info.tier ? ` / ミート：${CONFIG.tierLabels[info.tier]}` : '';
+  timingText = `[ ${typeName} / ${tEval}${meetText} ] `;
  } else {
   timingText = `[ ${typeName} ] `;
  }
@@ -78,14 +79,14 @@ function showDetailMsg(k, ms) {
  setMsg(timingText + actionText);
 }
 
-function result(k,ms){const c=G.cnt;
+function result(k,ms,info){const c=G.cnt;
  if(k==='ball'){c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)}
  if(k==='look'||k==='miss'){c.s++;const m=k==='miss';
   if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;showDetailMsg(k, ms);return fin(1200)}
   showDetailMsg(k, ms);return next(800)}
- if(k==='foul'){if(c.s<2)c.s++;const ad=rnd(46,78),a=(Math.random()<.5?-1:1)*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
-  if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms);fin(1000)},1);return}
-  showDetailMsg('foul', ms);flight(to,'fly',()=>next(200));return}
+ if(k==='foul'){if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
+  banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
+  showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return}
  if(k==='gr'){const a=rnd(-35,35)*P/180,d=rnd(70,130);banner('ゴロ!');
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
   if(dp)G.bases[1]=0;if(!end)r=adv(1,false);
@@ -122,13 +123,13 @@ function result(k,ms){const c=G.cnt;
    fin(1000);
   }, 1, isFinePlay ? {diving:true} : null);
   return;}
- hit(k,ms)}
+ hit(k,ms,info)}
 
 function nrst(to,ids){let m=1e9,r=ids[0];ids.forEach(j=>{const q=Math.hypot(FD[j][0]-to.x,FD[j][1]-to.y);if(q<m){m=q;r=j}});return r}
 
-function hit(k, ms) {
+function hit(k, ms, info) {
  const n = {'1B':1, '2B':2, '3B':3, HR:4}[k];
- const a = cl(ms!=null?cl(ms*.3,-38,38)+rnd(-9,9):rnd(-40,40),-42,42)*P/180;
+ const a = (info&&info.angle!=null ? cl(info.angle,-44,44) : cl(cl(ms*.3,-38,38)+rnd(-9,9),-42,42))*P/180;
  
  const edge = (k==='2B'||k==='3B')&&Math.abs(a)>=36*P/180;
  const wall = (k==='2B'||k==='3B')&&!edge;
@@ -142,7 +143,7 @@ function hit(k, ms) {
  if (isFinePlayHit) {
   G.outs++;
   banner('ファインプレー！！', 'hr');
-  showDetailMsg('fine', ms);
+  showDetailMsg('fine', ms, info);
   flight(to, 'fly', () => {
    banner('ヒット性の当たりをもぎ取った！');
    fin(1200);
@@ -330,7 +331,7 @@ function hit(k, ms) {
  const o = edge ? {fi: nrst(to, [6, 8]), ri: nrst(to, [2, 5])} : k === '1B' ? {fi: nrst(to, [6, 7, 8]), ...(ground ? {ri: nrst(to, [0, 2, 3, 4, 5])} : {h: 22})} : (k === '2B' || k === '3B') ? {fi: nrst(to, [6, 7, 8]), wall} : null;
  G.hits[G.top ? 0 : 1]++;
  banner({'1B':'ヒット!','2B':'ツーベース!','3B':'スリーベース!',HR:'ホームラン!!'}[k], k==='HR'?'hr':'');
- showDetailMsg(k, ms);
+ showDetailMsg(k, ms, info);
  
  let actualTo = {x: to.x, y: to.y};
  const fi = nrst(to, [6, 7, 8]);

@@ -1,19 +1,29 @@
 /* batting.js — 打撃判定。数値は config.js の CONFIG で調整 */
 
-// 累積確率テーブルから結果を1つ引く
-const roll=t=>{const r=Math.random();for(const [p,k] of t)if(r<p)return k;return t[t.length-1][1]};
+// 重みテーブル {結果:重み} から結果を1つ引く
+const rollW=o=>{let t=0;for(const k in o)t+=o[k];let r=Math.random()*t,last='fly';for(const k in o){last=k;if((r-=o[k])<0)return k}return last};
 
-function goodQ(side,isLeft,isFast){const g=(isLeft&&isFast)||(!isLeft&&!isFast);return side==='right'?g:!g}
+const clamp01=v=>Math.max(0,Math.min(1,v));
 
-// スイング判定: 空振りか、当たりの種類を返す(CPUローカル/オンライン共通)
+// ミート度(0〜1): タイミングとカーソルのズレから。1=ジャストでボールのど真ん中
+function meetOf(ms,dd){
+ const tq=clamp01(1-Math.abs(ms)/CONFIG.timingWindowMs),dq=clamp01(1-dd/CONFIG.cursorSize);
+ return Math.pow(tq,CONFIG.meetTimingPow)*Math.pow(dq,CONFIG.meetDistPow);
+}
+const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak';
+
+// スイング判定(CPUローカル/オンライン共通)。戻り値 {k:結果, meet, tier, angle}
 // p:投球 ms:ジャストとのズレ(負=早い) bx,by:その瞬間のボール位置 curX,curY:カーソル位置
 function batResult(p,ms,bx,by,curX,curY){
- const dd=Math.hypot(bx-curX,by-curY),d=dist(p);
- if(Math.abs(ms)>CONFIG.timingWindowMs||dd>CONFIG.cursorSize||(d>=2&&Math.random()<CONFIG.farZoneMissRate))return 'miss';
- const isUpper=by<curY,isLeft=bx<curX,isFast=ms<0;
- const side=G.batterSides?G.batterSides[G.top?0:1]:'right';
- const good=goodQ(side,isLeft,isFast);
- return roll(CONFIG.hitTable[(good?'good':'bad')+(isUpper?'Upper':'Lower')]);
+ const C=CONFIG,dd=Math.hypot(bx-curX,by-curY),d=dist(p);
+ if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize||(d>=2&&Math.random()<C.farZoneMissRate))return {k:'miss'};
+ const meet=meetOf(ms,dd),tier=tierOf(meet);
+ const lift=(curY-by)/C.cursorSize,traj=lift>C.liftBand?'up':lift<-C.liftBand?'down':'flat';
+ // 方向: 早い=引っ張り(右打者は画面左、左打者は右)。コースのズレも加え、ミート度が低いほどブレる
+ const sgn=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='left'?-1:1;
+ const angle=sgn*(ms*C.dirTimingGain+(bx-curX)/C.cursorSize*C.dirCourseGain)+rnd(-1,1)*C.dirNoiseDeg*(1-meet);
+ if(Math.abs(angle)>C.foulAngleDeg)return {k:'foul',meet,tier,angle};
+ return {k:rollW(C.hitTable[tier][traj]),meet,tier,angle};
 }
 
 function swing(){
@@ -26,7 +36,8 @@ function swing(){
  const now=performance.now(),p=G.pitch;
  p.t=(now-p.t0)/p.dur;G.phase='busy';G.swingT=now;
  const ms=now-p.t0-p.dur,[bx,by]=bp(p,p.t);
- result(batResult(p,ms,bx,by,G.cur.x,G.cur.y),ms);
+ const r=batResult(p,ms,bx,by,G.cur.x,G.cur.y);
+ result(r.k,ms,r);
 }
 
 function cpuBat(){const p=G.pitch,d=dist(p),z=d<=1,rep=p.type===G.last;G.last=p.type;
@@ -35,5 +46,5 @@ function cpuBat(){const p=G.pitch,d=dist(p),z=d<=1,rep=p.type===G.last;G.last=p.
  G.swingT=performance.now();
  const c=.72-(p.type==='c'||p.type==='cu'?.1:p.type==='f'?.14:0)-(d==1?.08:0)-(d>=2?.35:0)+(rep?.12:0);
  if(Math.random()>c)return result('miss', 0);
- result(roll(CONFIG.cpuHitTable), 0);
+ result(Math.random()<CONFIG.cpuFoulRate?'foul':rollW(CONFIG.cpuHitTable), 0);
 }
