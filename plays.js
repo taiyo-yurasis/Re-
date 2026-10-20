@@ -1,3 +1,4 @@
+function addMatchPts(team,points){G.pts[team]=(G.pts[team]||0)+points}
 /* plays.js — 打った後の処理(アウト/ヒット/四球・走者の進塁・送球) */
 function throwPlan(to, targetBase){
  const tp = targetBase === 4 ? {x: HP.x, y: HP.y} : {x: BS[targetBase].x, y: BS[targetBase].y};
@@ -42,7 +43,7 @@ function safeAtFirst(kind,to,ms,isHit,info){
  const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y),F=ground?300+d*3.2:500+d*2.6;
  const T=F+(ground?630:500),r=forceAdv(T);
  flight(to,ground?'ground':'fly',()=>{
-  if(isHit){G.hits[G.top?0:1]++;banner('内野安打!');showDetailMsg('ih',ms,info)}
+  if(isHit){G.hits[G.top?0:1]++;addMatchPts(G.top?0:1,300+300*r);banner('内野安打!');showDetailMsg('ih',ms,info)}
   else{banner('エラー!');showDetailMsg('err',ms,info)}
   score(r);
   if(ground&&G.fl)G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[1],dur:380,dly:200}],currentStep:0};
@@ -76,7 +77,7 @@ function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let 
  }
  nb[1]=1;
  G.bases=[0,nb[1],nb[2],nb[3]];
- G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};score(r)}
+ G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};addMatchPts(G.top?0:1,50+300*r);score(r)}
 
 function showDetailMsg(k, ms, info) {
  const p = G.pitch;
@@ -118,7 +119,7 @@ function showDetailMsg(k, ms, info) {
 function result(k,ms,info){const c=G.cnt;
  if(k==='ball'){c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)}
  if(k==='look'||k==='miss'){c.s++;const m=k==='miss';
-  if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;showDetailMsg(k, ms);return fin(1200)}
+  if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;addMatchPts(G.top?1:0,40);showDetailMsg(k, ms);return fin(1200)}
   showDetailMsg(k, ms);return next(800)}
  if(k==='foul'){if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
   banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
@@ -130,7 +131,7 @@ function result(k,ms,info){const c=G.cnt;
   const dp=G.bases[1]&&G.outs<2&&Math.random()<.35,end=G.outs+1+(dp?1:0)>=3;let r=0;
   if(dp)G.bases[1]=0;if(!end)r=advRand('gr',false);else if(G.outs===2)adv(1,false);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
-   G.outs++;let m='ゴロアウト';if(dp){G.outs++;m='ダブルプレー!'}
+   G.outs++;let m='ゴロアウト';if(dp){G.outs++;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}
    score(r);
    if(G.fl) {
     if(dp) {
@@ -159,7 +160,7 @@ function result(k,ms,info){const c=G.cnt;
    let m = isFinePlay ? 'ファインプレー!!' : 'フライアウト';
    if(G.outs>=3)adv(1,false);
    else if(!isFinePlay){const C=CONFIG;let sf=false;
-    if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);score(1);sf=true;m='犠牲フライ!'}
+    if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);addMatchPts(G.top?0:1,450);score(1);sf=true;m='犠牲フライ!'}
     if(G.bases[2]&&!G.bases[3]&&d>=C.tagUpDepth&&Math.random()<C.tagUpSecondRate){G.bases[2]=0;mvAdd({a:2,b:3});G.bases[3]=1;G.mv.stay=G.mv.stay.filter(x=>x!==2);if(!sf)m='タッチアップ!'}}
    banner(m, isFinePlay ? 'hr' : '');
    showDetailMsg('fly', ms, info);
@@ -206,6 +207,9 @@ function hit(k, ms, info) {
  let targetBaseForThrow = 2;
  
  r = n<=2 ? advRand(k, true) : adv(n, true);
+ const batTeam=G.top?0:1;
+ const hitPts=k==='1B'?300:k==='2B'?600:k==='3B'?1000:[1200,1500,2000,2500][Math.min(4,Math.max(1,r))-1];
+ addMatchPts(batTeam,hitPts+300*r);
  const advanced = G.mv;
  if(advanced){mvs.push(...advanced.moves);stay.push(...advanced.stay)}
  targetBaseForThrow = n===4 ? 0 : n;
