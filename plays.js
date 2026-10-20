@@ -123,7 +123,7 @@ function result(k,ms,info){const c=G.cnt;
  if(k==='foul'){if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
   banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
   showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return}
- if(k==='gr'){const a=rnd(-35,35)*P/180,d=rnd(70,130);banner('ゴロ!');
+ if(k==='gr'){const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-35,35))*P/180,d=rnd(70,130);banner('ゴロ!');
   const roll=Math.random(),gto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
   if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
@@ -149,7 +149,7 @@ function result(k,ms,info){const c=G.cnt;
    }
    banner(m);showDetailMsg('gr', ms, info);fin(800)},1);
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return}
- if(k==='fly'){const a=rnd(-38,38)*P/180,d=rnd(160,270);banner('フライ!');
+ if(k==='fly'){const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=rnd(160,270);banner('フライ!');
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',{x:240+d*Math.sin(a),y:375-d*Math.cos(a)},ms,false,info);
   
   const isFinePlay = Math.random() < CONFIG.finePlayFly;
