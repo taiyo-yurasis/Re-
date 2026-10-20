@@ -35,7 +35,7 @@ function validSnap(s){
 }
 function applySnap(s){
  if(G.net!=='guest'||!validSnap(s))return;
- if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;$('ov').style.display='none';if(Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
+ if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ov').style.display='none';if(Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
  Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
@@ -65,7 +65,7 @@ function netStart(rm){
  }});
  rm.on('swing',m=>{if(!m.isMe&&G.net==='host'&&!canBat())remoteSwing(m.data)});
  rm.on('hello',m=>{const d=m.data;if(!m.isMe&&G.net==='hosting'&&d&&d.room===roomCode){
-  $('ov').style.display='none';const team=Math.random()<.5?0:1;
+  $('ov').style.display='none';waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);const team=Math.random()<.5?0:1;
   newGame(hostN,true,true,team);G.net='host';G.me=team;G.seq=0;G.gid=Math.random();startHalf();
  }});
  rm.onLeave(()=>{if(G.net==='host'||G.net==='guest'){closeRoom();G.net=null;$('ov').style.display='flex';$('ovt').textContent='対戦相手が切断しました';$('ovs').textContent='部屋を閉じました。もう一度対戦するには新しい部屋を作ってね。';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false)}});
@@ -77,7 +77,7 @@ async function hostRoom(N){
  const code=Math.random().toString(36).substring(2,8).toUpperCase();let rm;
  try{rm=await room.join('yk'+code)}catch(e){$('ovs').textContent='部屋を作れなかった。もう一度試してね';return}
  hostN=N;roomCode=code;waitingRoom=true;G.net='hosting';netStart(rm);$('ovt').textContent='合言葉 '+code;$('ovs').textContent='相手にこの6桁を伝えて。入ってくるのを待ってるよ…';
- document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true)
+ document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
 }
 $('jn').onclick=async()=>{
  if(waitingRoom)return;
@@ -86,5 +86,6 @@ $('jn').onclick=async()=>{
  let rm;try{rm=await room.join('yk'+c)}catch(e){$('ovs').textContent='部屋に入れなかった…(招待や権限を確認してね)';return}
  roomCode=c;newGame(3,true,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovs').textContent='ホストを待ってる…';
  helloTimer=setInterval(()=>{if(G.gid||G.net!=='guest'){clearInterval(helloTimer);helloTimer=null}else send('hello',{room:c})},1000);send('hello',{room:c});
- document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true)
+ document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
 };
+$('cancel-room').onclick=()=>{closeRoom();G.net=null;G.me=undefined;hostN=1;$('code').value='';$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovt').textContent='⚾ 野球盤 STADIUM';$('ovs').innerHTML='打撃: 画面をドラッグしてカーソルを合わせ、<b>指を離した瞬間</b>にスイング!<br>投球: 球種を選び、カーソルで狙って「投げる!」。';$('ov').style.display='flex'};
