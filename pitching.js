@@ -1,20 +1,26 @@
 /* pitching.js — 投球(狙い・軌道・投げる) */
 function resetPitchOffset(){const j=TY[G.sel].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());G.aimOffset={x:r*Math.cos(a),y:r*Math.sin(a)}}
 function pitchTarget(){const o=G.aimOffset||{x:0,y:0},team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x+o.x,0,220),y:cl(G.cur.y+o.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
-function bp(p,t){
- const u=cl(t,0,1),hand=p.sg||1,S={x:110-hand*12,y:40},br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2);
- let x=S.x+(p.x-S.x)*u,y=S.y+(p.y-S.y)*u;
- switch(p.type){
-  case 'sl': x+=hand*(42*Math.pow(u,6)-18*Math.sin(P*u)); break;
-  case 'c': x-=hand*23*br;y+=52*late-13*Math.sin(P*u);break;
-  case 'f': y+=52*late;break;
-  case 'sh': x-=hand*30*late;break;
-  case 'cu': x+=hand*6*br;y+=11*br;break;
+function breakAt(type,hand,u){
+ const br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2);
+ switch(type){
+  case 'sl': return {x:-hand*30*Math.pow(Math.max(0,(u-.35)/.65),2),y:0};
+  case 'c': return {x:-hand*23*br,y:52*late-13*Math.sin(P*u)};
+  case 'f': return {x:0,y:52*late};
+  case 'sh': return {x:hand*30*late,y:0};
+  case 'cu': return {x:hand*6*br,y:11*br};
+  default:return {x:0,y:0};
  }
- return[x,y]
+}
+function bp(p,t){
+ const u=cl(t,0,1),hand=p.sg||1,S={x:110-hand*12,y:40};
+ const end=breakAt(p.type,hand,1),now=breakAt(p.type,hand,u);
+ return [S.x+(p.x-S.x)*u+now.x-end.x*u,S.y+(p.y-S.y)*u+now.y-end.y*u];
 }
 
 function throwP(t,x,y){
+ t=typeof t==='string'&&Object.hasOwn(TY,t)?t:'s';
+ const pos=v=>{const n=Number(v);return Number.isFinite(n)?cl(n,0,220):110};x=pos(x);y=pos(y);
  const defTeam = G.top ? 1 : 0;
  const sgDir = G.pitcherHands ? G.pitcherHands[defTeam] : 1;
 

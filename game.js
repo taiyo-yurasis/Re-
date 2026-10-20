@@ -2,9 +2,10 @@
 let cfgPitcher = 1;
 let cfgBatter = 'right';
 let cfgCpuFirst = true;
-function openingTop(mode,randomTop=Math.random()<.5){return mode===0?cfgCpuFirst:mode===2?randomTop:true}
+function openingTop(){return true}
 
-function newGame(N,pvp,opening= true){
+function newGame(N,pvp,opening=true,humanTeam=null){
+ const human = pvp ? (humanTeam===0||humanTeam===1?humanTeam:0) : (cfgCpuFirst?0:1);
  const pHand = cfgPitcher;
  const bSide1 = cfgBatter === 'random' ? (Math.random() < 0.5 ? 'right' : 'left') : cfgBatter;
  const bSide2 = cfgBatter === 'random' ? (Math.random() < 0.5 ? 'right' : 'left') : cfgBatter;
@@ -14,7 +15,8 @@ function newGame(N,pvp,opening= true){
   N,
   pvp:!!pvp,
   inn:1,
-  top:opening,
+  top:true,
+  humanTeam:human,
   outs:0,
   cnt:{b:0,s:0},
   bases:[0,0,0,0],
@@ -44,8 +46,8 @@ function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitc
    throwP(t,x,y)})}
  else{G.phase='aim';resetPitchOffset();setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
-function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;p.t=(now-p.t0)/p.dur;
- if(G.net==='guest')return;if(batHuman()){if(p.t>(G.net?1.2+500/p.dur:1.2)){G.phase='busy';take()}}
+function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;
+ if(G.net==='guest')return;if(batHuman()){const limit=1+CONFIG.timingWindowMs/p.dur+(G.net?500/p.dur:0);if(p.t>limit){G.phase='busy';take()}}
  else if(p.t>=.98){G.phase='busy';cpuBat()}}
 function take(){result(dist(G.pitch)<=1?'look':'ball')}
 
@@ -64,6 +66,6 @@ function endHalf(){
 }
 
 function over(){G.over=true;G.phase='over';const a=tot(0),b=tot(1);
- $('ovt').textContent=G.pvp?(a>b?'🎉 P1の勝ち!':a<b?'🎉 P2の勝ち!':'🤝 引き分け'):a>b?'🎉 勝利!':a<b?(G.walkoff?'😢 サヨナラ負け…':'😢 敗北…'):'🤝 引き分け';
- $('ovs').textContent=G.pvp?`P1 ${a} - ${b} P2`:`あなた ${a} - ${b} CPU`;$('ov').style.display='flex';
+ $('ovt').textContent=G.pvp?(a>b?'🎉 ビジターの勝ち!':a<b?'🎉 ホームの勝ち!':'🤝 引き分け'):(a===b?'🤝 引き分け':(((a>b)===(G.humanTeam===0))?'🎉 勝利!':(G.humanTeam===0&&G.walkoff?'😢 サヨナラ負け…':'😢 敗北…')));
+ $('ovs').textContent=G.pvp?`ビジター ${a} - ${b} ホーム`:`あなた ${tot(G.humanTeam)} - ${tot(1-G.humanTeam)} CPU`;$('ov').style.display='flex';
 }
