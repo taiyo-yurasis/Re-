@@ -14,6 +14,10 @@ function breakAt(type,hand,u){
 }
 function bp(p,t){
  const u=cl(t,0,1),hand=p.sg||1,S={x:110-hand*12,y:40};
+ // Restore the exact pre-PR #1 slider trajectory; leave other pitch types unchanged.
+ if(p.type==='sl'){
+  return [S.x+(p.x-S.x)*u+hand*(42*Math.pow(u,6)-18*Math.sin(P*u)),S.y+(p.y-S.y)*u];
+ }
  const end=breakAt(p.type,hand,1),now=breakAt(p.type,hand,u);
  return [S.x+(p.x-S.x)*u+now.x-end.x*u,S.y+(p.y-S.y)*u+now.y-end.y*u];
 }
