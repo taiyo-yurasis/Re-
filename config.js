@@ -28,6 +28,20 @@ const CONFIG = {
  errorRate: 0.1,        // アウトになるはずのゴロ/フライが野手のエラーになる確率(打者は一塁セーフ・安打にはならない)
  infieldHitRate: 0.05,  // アウトになるはずのゴロが内野安打(セーフ)になる確率
 
+ /* ---- 元からいた走者の進塁(確率)。前の走者から順に決め、塞がれたら手前で止まる ---- */
+ run1BSecondHome: 0.4,  // 単打: 二塁走者が一気に生還する確率(残りは三塁止まり。三塁走者は必ず生還)
+ run1BFirstThird: 0.25, // 単打: 一塁走者が三塁まで行く確率(残りは二塁止まり)
+ run2BFirstHome: 0.4,   // 二塁打: 一塁走者が生還する確率(残りは三塁止まり。二・三塁走者は必ず生還)
+ runGrThirdHome: 0.6,   // ゴロアウト: 三塁走者が生還する確率(残りは三塁に残る)
+ runGrSecondThird: 0.65,// ゴロアウト: 二塁走者が三塁へ進む確率(三塁走者が残ると進めない)
+ sacFlyDepthMid: 190,   // フライの飛距離がこれ以上で「中間」、sacFlyDepthDeep以上で「深い」
+ sacFlyDepthDeep: 215,
+ sacFlyShallowRate: 0.05, // 犠牲フライ(三塁走者生還)になる確率: 浅い/中間/深い
+ sacFlyMidRate: 0.3,
+ sacFlyDeepRate: 0.7,
+ tagUpDepth: 240,       // これ以上深いフライで、二塁走者がタッチアップして三塁へ進める(三塁が空いているとき)
+ tagUpSecondRate: 0.25,
+
  /* ---- 空振りの境界 ---- */
  timingWindowMs: 220,   // ジャストから±この範囲を超えると空振り
  farZoneMissRate: 0.6,  // ゾーンから大きく外れた球(dist>=2)を振ったときの空振り率
