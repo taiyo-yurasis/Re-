@@ -7,16 +7,16 @@ function breakAt(type,hand,u){
   case 'sl': return {x:-hand*30*Math.pow(Math.max(0,(u-.35)/.65),2),y:0};
   case 'c': return {x:-hand*23*br,y:52*late-13*Math.sin(P*u)};
   case 'f': return {x:0,y:52*late};
-  case 'sh': return {x:hand*30*late,y:0};
+  case 'sh': return {x:-hand*30*late,y:0};
   case 'cu': return {x:hand*6*br,y:11*br};
   default:return {x:0,y:0};
  }
 }
 function bp(p,t){
  const u=cl(t,0,1),hand=p.sg||1,S={x:110-hand*12,y:40};
- // Restore the exact pre-PR #1 slider trajectory; leave other pitch types unchanged.
+ // スライダー: 中盤で少し食い込んでから終盤に曲がり、着地は狙い位置に揃える(-42*u で補正)
  if(p.type==='sl'){
-  return [S.x+(p.x-S.x)*u+hand*(42*Math.pow(u,6)-18*Math.sin(P*u)),S.y+(p.y-S.y)*u];
+  return [S.x+(p.x-S.x)*u+hand*(42*Math.pow(u,6)-18*Math.sin(P*u)-42*u),S.y+(p.y-S.y)*u];
  }
  const end=breakAt(p.type,hand,1),now=breakAt(p.type,hand,u);
  return [S.x+(p.x-S.x)*u+now.x-end.x*u,S.y+(p.y-S.y)*u+now.y-end.y*u];
