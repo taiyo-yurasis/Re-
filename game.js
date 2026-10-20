@@ -55,8 +55,7 @@ function take(){result(dist(G.pitch)<=1?'look':'ball')}
 
 function endHalf(){
  const a=tot(0), b=tot(1);
- const isOverByInning = G.inn >= G.N && a !== b;
- const ed = G.top ? (G.inn >= G.N && b > a) : (isOverByInning || (G.inn >= G.N && a === b && !G.top));
+ const ed = G.top ? (G.inn >= G.N && b > a) : G.inn >= G.N;
 
  banner(ed?'ゲームセット':'チェンジ');
  later(ed?1800:1300,()=>{
