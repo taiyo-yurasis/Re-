@@ -44,6 +44,13 @@ const CONFIG = {
 
  /* ---- 空振りの境界 ---- */
  timingWindowMs: 220,   // ジャストから±この範囲を超えると空振り
+ judge: {
+  nearer: { s:false, sl:false, c:true, f:false, sh:false, cu:false }, // 方式A: 着地点とスイング時のボール位置の近い方を基準にする
+  bonus: { s:false, sl:false, c:true, f:false, sh:true, cu:false }, // 方式B: ジャスト付近のミート度ボーナス
+  bonusRadius: 16,
+  bonusMax: 0.25,
+  latePenalty: 0.5
+ },
  farZoneMissRate: 0.6,  // ゾーンから大きく外れた球(dist>=2)を振ったときの空振り率
  labelPerfectMs: 70,    // メッセージ表示のみ: この範囲内なら「タイミング：完璧」
  labelNearMs: 140,      // メッセージ表示のみ: これ以上なら「早すぎ/遅すぎ」
