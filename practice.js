@@ -20,7 +20,7 @@ function pracResult(k,ms,info){
  const S=G.prac,p=G.pitch,L=CONFIG.tierLabels;S.n++;
  let parts=[TY_NAMES[p.type]];
  if(ms!=null){
-  const[lx,ly]=bp(p,1),judge=judgeRef(p,ms,G.cur.x,G.cur.y),dd=judge.dd,lift=(G.cur.y-judge.ry)/CONFIG.cursorSize,J=CONFIG.judge||{};
+  const judge=judgeRef(p,ms,G.cur.x,G.cur.y),dd=judge.dd,lift=(G.cur.y-judge.ry)/CONFIG.cursorSize,J=CONFIG.judge||{};
   S.sw++;S.msSum+=ms;
   parts.push(`${ms<0?'早い':'遅い'} ${Math.abs(ms).toFixed(0)}ms`);
   parts.push(J.nearer&&J.nearer[p.type]?`距離 ${dd.toFixed(0)}px(基準:${judge.usedBall?'ボール':'着地点'})`:`距離 ${dd.toFixed(0)}px`);
