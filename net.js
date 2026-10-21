@@ -70,7 +70,7 @@ function netStart(rm){
   $('ov').style.display='none';waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);const team=Math.random()<.5?0:1;
   const gph=d.ph===-1?-1:1,gbs=['right','left','random'].includes(d.bs)?d.bs:'right',cfgs=[null,null];
   cfgs[team]={ph:cfgPitcher,bs:cfgBatter};cfgs[1-team]={ph:gph,bs:gbs};
-  newGame(hostN,true,true,team,cfgs);G.net='host';G.me=team;G.seq=0;G.gid=Math.random();startHalf();
+  newGame(hostN,true,team,cfgs);G.net='host';G.me=team;G.seq=0;G.gid=Math.random();startHalf();
  }});
  rm.onLeave(()=>{if(G.net==='host'||G.net==='guest'){closeRoom();G.net=null;$('ov').style.display='flex';$('ovt').textContent='対戦相手が切断しました';$('ovs').textContent='部屋を閉じました。もう一度対戦するには新しい部屋を作ってね。';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false)}});
 }
@@ -89,7 +89,7 @@ $('jn').onclick=async()=>{
  closeRoom();const room=sbRoom();if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
  waitingRoom=true;const epoch=roomEpoch;document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block';
  let rm;try{rm=await room.join('yk'+c)}catch(e){waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovs').textContent='部屋に入れなかった…(招待や権限を確認してね)';return}
- if(epoch!==roomEpoch){rm.close();return}roomCode=c;newGame(3,true,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovs').textContent='ホストを待ってる…';
+ if(epoch!==roomEpoch){rm.close();return}roomCode=c;newGame(3,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovs').textContent='ホストを待ってる…';
  helloTimer=setInterval(()=>{if(G.gid||G.net!=='guest'){clearInterval(helloTimer);helloTimer=null}else send('hello',{room:c,ph:cfgPitcher,bs:cfgBatter})},1000);send('hello',{room:c,ph:cfgPitcher,bs:cfgBatter});
  document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
 };
