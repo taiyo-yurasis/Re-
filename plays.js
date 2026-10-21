@@ -197,13 +197,7 @@ function hit(k, ms, info) {
   return;
  }
 
- const b1 = G.bases[1] ? 1 : 0;
- const b2 = G.bases[2] ? 1 : 0;
- const b3 = G.bases[3] ? 1 : 0;
- const pattern = (b1 << 2) | (b2 << 1) | b3;
- 
  let r = 0;
- const nb = [0, 0, 0, 0];
  const mvs = [];
  const stay = [];
  let targetBaseForThrow = 2;
