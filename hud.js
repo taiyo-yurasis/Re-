@@ -2,6 +2,7 @@
 function banner(t,c){G.bid=(G.bid|0)+1;G.bt=[t,c];const b=$('bn');b.textContent=t;b.className='';void b.offsetWidth;b.className='on'+(c?' '+c:'')}
 const setMsg=t=>$('msg').textContent=t;
 function updateHud(){
+ if(G.prac)return pracHud();
  const n=Math.max(G.N,G.inn),sb=$('sb');
  sb.replaceChildren();
  const head=document.createElement('tr'),blank=document.createElement('th');head.appendChild(blank);

@@ -116,7 +116,7 @@ function showDetailMsg(k, ms, info) {
  setMsg(parts.join(' ｜ '));
 }
 
-function result(k,ms,info){const c=G.cnt;
+function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
  if(k==='ball'){c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)}
  if(k==='look'||k==='miss'){c.s++;const m=k==='miss';
   if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;addMatchPts(G.top?1:0,40);showDetailMsg(k, ms);return fin(1200)}

@@ -75,6 +75,16 @@ document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',
  pvpSel=+b.dataset.m;
  document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
  $('cpu-order-row').style.display=pvpSel===0?'flex':'none';
+ $('prac-box').style.display=pvpSel===3?'flex':'none';$('n-row').style.display=pvpSel===3?'none':'flex';$('room-row').style.display=pvpSel===3?'none':'flex';
 }));
 function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(pitHuman()?'p':'h');if(k===ck)return;ck=k;
  $('pts').style.display=k==='p'?'flex':'none';$('sw').style.display=k==='p'?'':'none';$('hint').style.display=k==='h'?'flex':'none'}
+
+/* ---- 打撃練習 ---- */
+document.querySelectorAll('[data-pt]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.pt;
+ if(pracCfg.types.has(t)){if(pracCfg.types.size>1){pracCfg.types.delete(t);b.classList.remove('on')}}else{pracCfg.types.add(t);b.classList.add('on')}}));
+document.querySelectorAll('[data-pc]').forEach(b=>b.addEventListener('click',()=>{pracCfg.course=b.dataset.pc;
+ document.querySelectorAll('[data-pc]').forEach(x=>x.classList.toggle('on',x===b))}));
+$('prac-go').addEventListener('click',()=>{$('ov').style.display='none';startPractice()});
+$('prac-reset').addEventListener('click',()=>{if(G.prac){G.prac=pracStats();updateHud()}});
+$('prac-exit').addEventListener('click',()=>location.reload());

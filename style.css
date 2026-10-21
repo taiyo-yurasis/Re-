@@ -43,3 +43,4 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 #hint{display:none;flex:1;flex-direction:column;justify-content:center;gap:6px;font-size:13px;line-height:1.6;color:var(--mut)}
 #hint b{color:var(--ink)}
 .card p{margin:0;font-size:13px;line-height:1.6;color:var(--mut)}
+#prac-ctl{display:none;gap:8px;justify-content:center;margin:2px 0 6px}

@@ -10,6 +10,7 @@
 <div id="app">
  <div class="hd"><table id="sb"></table><div id="cn"></div></div>
  <div id="st"></div>
+ <div id="prac-ctl"><button class="bt sm" id="prac-reset">成績リセット</button><button class="bt sm" id="prac-exit">タイトルへ</button></div>
  <div class="fw"><canvas id="f" width="480" height="400"></canvas><div id="bn"></div></div>
  <div id="msg"></div>
  <div class="ct">
@@ -39,7 +40,7 @@
 <div id="ov"><div class="card">
  <h2 id="ovt">⚾ 野球盤 STADIUM</h2>
  <p id="ovs">打撃: 画面をドラッグしてカーソルを合わせ、<b>指を離した瞬間</b>にスイング!<br>投球: 球種を選び、カーソルで狙って「投げる!」。</p>
- <div class="row"><button class="bt on" data-m="0">CPU戦</button><button class="bt" data-m="1">対人戦</button><button class="bt" data-m="2">オンライン</button></div>
+ <div class="row"><button class="bt on" data-m="0">CPU戦</button><button class="bt" data-m="1">対人戦</button><button class="bt" data-m="2">オンライン</button><button class="bt" data-m="3">打撃練習</button></div>
  
  <div class="setting-box">
   <div class="setting-row">
@@ -60,8 +61,16 @@
   </div>
  </div>
 
- <div class="row"><button class="bt" data-n="3">3回戦で遊ぶ</button><button class="bt" data-n="5">5回戦で遊ぶ</button></div>
- <div class="row"><input id="code" placeholder="合言葉(英数6桁)"><button class="bt" id="jn">部屋に入る</button><button class="bt" id="cancel-room" style="display:none">キャンセル</button></div>
+ <div id="prac-box" class="setting-box" style="display:none">
+  <div class="setting-row" style="flex-wrap:wrap"><span>球種:</span>
+   <button class="bt sm on" data-pt="s">ストレート</button><button class="bt sm on" data-pt="sl">スライダー</button><button class="bt sm on" data-pt="c">カーブ</button>
+   <button class="bt sm on" data-pt="f">フォーク</button><button class="bt sm on" data-pt="sh">ツーシーム</button><button class="bt sm on" data-pt="cu">チェンジアップ</button></div>
+  <div class="setting-row" style="flex-wrap:wrap"><span>コース:</span>
+   <button class="bt sm on" data-pc="r">ランダム</button><button class="bt sm" data-pc="in">内角</button><button class="bt sm" data-pc="mid">真ん中</button><button class="bt sm" data-pc="out">外角</button></div>
+  <div class="row"><button class="bt on" id="prac-go">練習スタート</button></div>
+ </div>
+ <div class="row" id="n-row"><button class="bt" data-n="3">3回戦で遊ぶ</button><button class="bt" data-n="5">5回戦で遊ぶ</button></div>
+ <div class="row" id="room-row"><input id="code" placeholder="合言葉(英数6桁)"><button class="bt" id="jn">部屋に入る</button><button class="bt" id="cancel-room" style="display:none">キャンセル</button></div>
  <div class="version">Ver.1.0.1</div>
 </div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -73,6 +82,7 @@
 <script src="batting.js"></script>
 <script src="plays.js"></script>
 <script src="game.js"></script>
+<script src="practice.js"></script>
 <script src="net.js"></script>
 <script src="input.js"></script>
 <script src="main.js"></script>

@@ -41,9 +41,10 @@ function newGame(N,pvp,opening=true,humanTeam=null,teamCfg=null){
 
 function startHalf(){selectNextBatterSide();G.outs=0;G.bases=[0,0,0,0];G.cnt={b:0,s:0};G.runs[G.top?0:1][G.inn-1]=0;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='idle';
  banner(`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
-function ready(){if(G.over)return;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
+function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
  if(!G.net&&!pitHuman()){setMsg('カーソルをボールに合わせて、離した瞬間にスイング!');
   later(rnd(700,1300),()=>{
+   if(G.prac){const pp=pracPitch();return throwP(pp.t,pp.x,pp.y)}
    const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];let x,y;
    if(Math.random()<.62){x=rnd(52,168);y=rnd(52,168)}else{x=rnd(20,200);y=rnd(20,200)}
    throwP(t,x,y)})}
