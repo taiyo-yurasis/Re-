@@ -30,7 +30,7 @@ const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak'
 // p:投球 ms:ジャストとのズレ(負=早い) curX,curY:カーソル位置
 // 距離・高さは投球の着地点(ボールが届く位置)とカーソルで決める。ボールが途中のどこにいるかは関係ない(早い・遅いはタイミング点だけに効く)
 function batResult(p,ms,curX,curY){
- const C=CONFIG,[lx,ly]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
+ const C=CONFIG,[lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
  if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
  const baseMeet=meetOf(ms,dd),J=C.judge||{};
