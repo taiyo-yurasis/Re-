@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.0.3';
+  const currentVersion = '1.0.4';
   const updates = [
+    {
+      version: '1.0.4',
+      title: 'SBOカウントの表示を修正',
+      changes: [
+        'ボール・ストライク・アウトの表示位置を揃えました。'
+      ]
+    },
     {
       version: '1.0.3',
       title: 'モードの整理',
