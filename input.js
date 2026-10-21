@@ -68,7 +68,7 @@ addEventListener('keydown',e=>{
  if(e.code==='Space'||e.key==='Enter'){e.preventDefault();act()}
 });
 document.querySelectorAll('#ov [data-n]').forEach(b=>b.addEventListener('click',()=>{
- $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel,openingTop(pvpSel));startHalf()}));
+ $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel);startHalf()}));
 
 let pvpSel=0,ck='';
 document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',()=>{
