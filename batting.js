@@ -10,17 +10,33 @@ function meetOf(ms,dd){
  const tq=clamp01(1-Math.abs(ms)/CONFIG.timingWindowMs),dq=clamp01(1-dd/CONFIG.cursorSize);
  return Math.pow(tq,CONFIG.meetTimingPow)*Math.pow(dq,CONFIG.meetDistPow);
 }
+
+// 共通の判定基準。方式Aは距離・高さの基準点を選び、方式Bは球種別のボーナス/遅れ率を返す。
+function judgeRef(p,ms,curX,curY){
+ const [lx,ly]=bp(p,1),[bx,by]=bp(p,1+ms/p.dur),J=CONFIG.judge||{};
+ const nearer=!!(J.nearer&&J.nearer[p.type]);
+ const usedBall=nearer&&Math.hypot(bx-curX,by-curY)<Math.hypot(lx-curX,ly-curY);
+ const rx=usedBall?bx:lx,ry=usedBall?by:ly;
+ const dd=Math.hypot(rx-curX,ry-curY),ballDist=Math.hypot(bx-lx,by-ly);
+ const bonusOn=!!(J.bonus&&J.bonus[p.type]);
+ const bq=bonusOn&&J.bonusRadius>0?clamp01(1-ballDist/J.bonusRadius):0;
+ const bonusRate=bonusOn?Math.max(0,J.bonusMax||0)*bq:0;
+ const lateRate=bonusOn&&ms>0?clamp01(ms/CONFIG.timingWindowMs):0;
+ return {rx,ry,usedBall,dd,ballDist,bonusRate,lateRate};
+}
 const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak';
 
 // スイング判定(CPUローカル/オンライン共通)。戻り値 {k:結果, meet, tier, angle}
 // p:投球 ms:ジャストとのズレ(負=早い) curX,curY:カーソル位置
 // 距離・高さは投球の着地点(ボールが届く位置)とカーソルで決める。ボールが途中のどこにいるかは関係ない(早い・遅いはタイミング点だけに効く)
 function batResult(p,ms,curX,curY){
- const C=CONFIG,[lx,ly]=bp(p,1),dd=Math.hypot(lx-curX,ly-curY),d=dist(p);
+ const C=CONFIG,[lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
  if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
- const meet=meetOf(ms,dd),tier=tierOf(meet);
- const lift=(curY-ly)/C.cursorSize,traj=lift>C.liftBand?'up':lift<-C.liftBand?'down':'flat';
+ const baseMeet=meetOf(ms,dd),J=C.judge||{};
+ const meet=J.bonus&&J.bonus[p.type]?Math.min(1,baseMeet*(1+judge.bonusRate))*(1-(J.latePenalty||0)*judge.lateRate):baseMeet;
+ const tier=tierOf(meet);
+ const lift=(curY-judge.ry)/C.cursorSize,traj=lift>C.liftBand?'up':lift<-C.liftBand?'down':'flat';
  // 方向: タイミングだけで決まる(早い=引っ張り。右打者は画面左、左打者は右)。ミート度が低いほどブレる
  const sgn=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='left'?-1:1;
  const angle=sgn*ms*C.dirTimingGain+rnd(-1,1)*C.dirNoiseDeg*(1-meet);

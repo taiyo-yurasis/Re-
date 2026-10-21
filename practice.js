@@ -20,8 +20,13 @@ function pracResult(k,ms,info){
  const S=G.prac,p=G.pitch,L=CONFIG.tierLabels;S.n++;
  let parts=[TY_NAMES[p.type]];
  if(ms!=null){
-  const[lx,ly]=bp(p,1),dd=Math.hypot(lx-G.cur.x,ly-G.cur.y),lift=(G.cur.y-ly)/CONFIG.cursorSize;
-  S.sw++;S.msSum+=ms;parts.push(`${ms<0?'早い':'遅い'} ${Math.abs(ms).toFixed(0)}ms`,`距離 ${dd.toFixed(0)}px`);
+  const judge=judgeRef(p,ms,G.cur.x,G.cur.y),dd=judge.dd,lift=(G.cur.y-judge.ry)/CONFIG.cursorSize,J=CONFIG.judge||{};
+  S.sw++;S.msSum+=ms;
+  parts.push(`${ms<0?'早い':'遅い'} ${Math.abs(ms).toFixed(0)}ms`);
+  parts.push(J.nearer&&J.nearer[p.type]?`距離 ${dd.toFixed(0)}px(基準:${judge.usedBall?'ボール':'着地点'})`:`距離 ${dd.toFixed(0)}px`);
+  if(judge.bonusRate>0)parts.push(`ミート+${(judge.bonusRate*100).toFixed(0)}%`);
+  const lateReduction=(J.latePenalty||0)*judge.lateRate;
+  if(lateReduction>0)parts.push(`遅れ-${(lateReduction*100).toFixed(0)}%`);
   if(k==='miss')parts.push(Math.abs(ms)>CONFIG.timingWindowMs?'タイミング外':dd>CONFIG.cursorSize?'カーソルが遠い':'ボール球を振った');
   if(info&&info.tier){S.tier[info.tier]++;parts.push('ミート:'+L[info.tier0||info.tier]+(info.tier0&&info.tier0!==info.tier?'→'+L[info.tier]:''))}
   if(k==='foul'&&info&&info.angle!=null)parts.push(`角度 ${info.angle.toFixed(0)}°`);
