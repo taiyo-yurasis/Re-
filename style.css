@@ -44,3 +44,24 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 #hint b{color:var(--ink)}
 .card p{margin:0;font-size:13px;line-height:1.6;color:var(--mut)}
 #prac-ctl{display:none;gap:8px;justify-content:center;margin:2px 0 6px}
+
+
+/* パッチノート */
+.patch-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
+.patch-trigger.bt.sm{flex:0 1 auto;min-height:34px;padding:5px 10px}
+.patch-footer .version{font-size:11px;text-align:right}
+#patch-ov{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,8,20,.82);overscroll-behavior:contain}
+#patch-ov.open{display:flex}
+#patch-card{width:min(100%,420px);max-height:min(82dvh,720px);display:flex;flex-direction:column;gap:12px;padding:18px;background:var(--bg);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.45);text-align:left}
+.patch-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.patch-header h2{margin:0;font-size:21px}
+.patch-header p{margin:4px 0 0;color:var(--mut);font-size:12px}
+.patch-close{flex:0 0 38px;min-height:38px;font-size:22px;line-height:1}
+#patch-list{min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:14px;padding-right:3px;-webkit-overflow-scrolling:touch}
+.patch-entry{padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.patch-entry h3{margin:0 0 8px;font-size:16px;color:var(--acc)}
+.patch-entry h4{margin:8px 0 4px;font-size:12px;color:var(--mut)}
+.patch-entry ul{margin:0;padding-left:20px;font-size:13px;line-height:1.65}
+.patch-entry li+li{margin-top:3px}
+.patch-entry.initial{background:transparent;border-style:dashed}
+@media(max-height:560px){#patch-card{max-height:90dvh;padding:12px}#patch-list{gap:8px}}
