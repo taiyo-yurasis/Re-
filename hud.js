@@ -16,7 +16,7 @@ function updateHud(){
   const total=document.createElement('td'),b=document.createElement('b');b.textContent=String(tot(t));total.appendChild(b);
   const hits=document.createElement('td');hits.textContent=String(G.hits[t]);tr.append(total,hits);sb.appendChild(tr);
  }
- const L=(k,v,m)=>`<div>${k}${Array.from({length:m},(_,i)=>`<i class="l ${i<v?'on l'+k.toLowerCase():''}"></i>`).join('')}</div>`;
+ const L=(k,v,m)=>`<div><span class="count-label">${k}</span>${Array.from({length:m},(_,i)=>`<i class="l ${i<v?'on l'+k.toLowerCase():''}"></i>`).join('')}</div>`;
  $('cn').innerHTML=L('B',G.cnt.b,3)+L('S',G.cnt.s,2)+L('O',Math.min(G.outs,2),2);
  const battingTeam=G.top?0:1,defTeam=1-battingTeam;
  const handStr=G.pitcherHands&&G.pitcherHands[defTeam]===1?'右投':'左投';
