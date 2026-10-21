@@ -9,6 +9,8 @@ th,td{padding:3px 5px;text-align:center;border:1px solid var(--line)}
 th{color:var(--mut);font-weight:600}
 td:first-child{text-align:left;font-weight:700;white-space:nowrap}
 #cn{background:var(--panel);border:1px solid var(--line);padding:4px 8px;font-size:12px;font-weight:700;display:flex;flex-direction:column;justify-content:space-around}
+#cn>div{display:flex;align-items:center}
+.count-label{display:inline-block;flex:0 0 10px;text-align:left}
 .l{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line);margin-left:4px}
 .l.on.lb{background:#4cd964}.l.on.ls{background:var(--acc)}.l.on.lo{background:#ff5a5f}
 #st{margin:6px 2px;font-size:14px;font-weight:700;color:var(--acc)}
