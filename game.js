@@ -2,11 +2,10 @@
 let cfgPitcher = 1;
 let cfgBatter = 'right';
 let cfgCpuFirst = true;
-function openingTop(){return true}
 const pickBatterSide=s=>s==='random'?(Math.random()<0.5?'right':'left'):s;
 function selectNextBatterSide(team=G.top?0:1){G.batterSides[team]=pickBatterSide(G.batterModes[team])}
 
-function newGame(N,pvp,opening=true,humanTeam=null,teamCfg=null){
+function newGame(N,pvp,humanTeam=null,teamCfg=null){
  const human = pvp ? (humanTeam===0||humanTeam===1?humanTeam:0) : (cfgCpuFirst?0:1);
  // チームごとの設定(オンライン時は teamCfg で [チーム0, チーム1] の投げ手/打席を渡す。無ければ自分の設定を両チームに使う)
  const cfgs = teamCfg || [{ph:cfgPitcher,bs:cfgBatter},{ph:cfgPitcher,bs:cfgBatter}];
