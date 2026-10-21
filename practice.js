@@ -31,7 +31,7 @@ function pracResult(k,ms,info){
  banner(PR_RL[k]||k);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[k]||k}`);updateHud();later(500,ready)}
 
 function pracHud(){
- const S=G.prac,sb=$('sb');sb.replaceChildren();
+ const S=G.prac,sb=$('prac-stats');sb.style.display='table';document.querySelector('.hd').style.display='none';sb.replaceChildren();
  const pc=(v,d)=>d?(v/d*100).toFixed(0)+'%':'-',sw=S.miss+S.foul+S.play,R=S.res,hit=R['1B']+R['2B']+R['3B']+R.HR,xb=R['2B']+R['3B']+R.HR;
  const avg=S.sw?`${S.msSum/S.sw<0?'早め':'遅め'} ${Math.abs(S.msSum/S.sw).toFixed(0)}ms`:'-';
  const rows=[['球数',S.n,'スイング',sw],['空振り',`${S.miss} (${pc(S.miss,sw)})`,'ファウル',`${S.foul} (${pc(S.foul,sw)})`],
