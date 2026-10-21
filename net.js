@@ -55,7 +55,7 @@ function remoteSwing(m){
  if(G.phase!=='pitch'||canBat()||!m||!Number.isFinite(m.t)||!Number.isFinite(m.x)||!Number.isFinite(m.y))return;
  const p=G.pitch;if(!p||!Number.isFinite(p.dur)||p.dur<=0)return;
  p.t=cl(m.t,0,1.3);G.phase='busy';G.swingT=performance.now();
- const ms=(p.t-1)*p.dur,[bx,by]=bp(p,p.t),r=batResult(p,ms,bx,by,cl(m.x,0,220),cl(m.y,0,220));result(r.k,ms,r)
+ const ms=(p.t-1)*p.dur,r=batResult(p,ms,cl(m.x,0,220),cl(m.y,0,220));result(r.k,ms,r)
 }
 function netStart(rm){
  RM=rm;

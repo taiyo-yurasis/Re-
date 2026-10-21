@@ -20,7 +20,7 @@ function pracResult(k,ms,info){
  const S=G.prac,p=G.pitch,L=CONFIG.tierLabels;S.n++;
  let parts=[TY_NAMES[p.type]];
  if(ms!=null){
-  const[bx,by]=bp(p,p.t),dd=Math.hypot(bx-G.cur.x,by-G.cur.y),lift=(G.cur.y-by)/CONFIG.cursorSize;
+  const[lx,ly]=bp(p,1),dd=Math.hypot(lx-G.cur.x,ly-G.cur.y),lift=(G.cur.y-ly)/CONFIG.cursorSize;
   S.sw++;S.msSum+=ms;parts.push(`${ms<0?'早い':'遅い'} ${Math.abs(ms).toFixed(0)}ms`,`距離 ${dd.toFixed(0)}px`);
   if(k==='miss')parts.push(Math.abs(ms)>CONFIG.timingWindowMs?'タイミング外':dd>CONFIG.cursorSize?'カーソルが遠い':'ボール球を振った');
   if(info&&info.tier){S.tier[info.tier]++;parts.push('ミート:'+L[info.tier0||info.tier]+(info.tier0&&info.tier0!==info.tier?'→'+L[info.tier]:''))}
