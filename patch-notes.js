@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.0.9';
+  const currentVersion = '1.0.10';
   const updates = [
+    {
+      version: '1.0.10',
+      title: 'ツーシームの遅振り補正を調整',
+      changes: [
+        'ツーシームの遅振りペナルティを0.50に設定し、遅れたスイングでミート補正が強くなりすぎないようにしました。'
+      ]
+    },
     {
       version: '1.0.9',
       title: 'オンライン対戦と操作の安定性を改善',
