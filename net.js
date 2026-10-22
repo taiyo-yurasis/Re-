@@ -1,5 +1,6 @@
 /* net.js — オンライン対戦(Supabase Realtime) */
 let RM=null,gb=0,hostN=3,SB=null,roomCode=null,helloTimer=null,helloTimeout=null,waitingRoom=false,roomEpoch=0;
+const pendingJoins=new Set();
 const ROOM_JOIN_TIMEOUT_MS=10000,HOST_HANDSHAKE_TIMEOUT_MS=15000;
 function sbRoom(){if(!SB&&window.supabase&&!SUPA_URL.includes('YOUR-')&&!SUPA_KEY.includes('YOUR-'))SB=supabase.createClient(SUPA_URL,SUPA_KEY,{realtime:{params:{eventsPerSecond:15}}});return SB?{join:joinRoom}:null}
 function closeRoom(){
@@ -8,15 +9,17 @@ function closeRoom(){
  if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}
  const old=RM;RM=null;roomCode=null;waitingRoom=false;
  if(old&&old.close)old.close();
+ pendingJoins.forEach(ch=>{try{SB.removeChannel(ch)}catch(e){console.warn('Pending channel cleanup failed',e)}});pendingJoins.clear();
 }
 function joinRoom(name){return new Promise((res,rej)=>{
  let settled=false;
  const ch=SB.channel(name,{config:{broadcast:{self:false},presence:{key:Math.random().toString(36).slice(2)}}}),hs={},leaveHandlers=[];
- const cleanup=()=>{try{SB.removeChannel(ch)}catch(e){console.warn('Realtime channel cleanup failed',e)}};
+ pendingJoins.add(ch);
+ const cleanup=()=>{pendingJoins.delete(ch);try{SB.removeChannel(ch)}catch(e){console.warn('Realtime channel cleanup failed',e)}};
  const finish=(err,value)=>{
   if(settled){if(value&&value.close)value.close();return}
   settled=true;clearTimeout(joinTimer);
-  if(err){cleanup();rej(err)}else res(value)
+  if(err){cleanup();rej(err)}else{pendingJoins.delete(ch);res(value)}
  };
  const joinTimer=setTimeout(()=>finish(new Error('JOIN_TIMEOUT')),ROOM_JOIN_TIMEOUT_MS);
  ['snap','throw','swing','hello'].forEach(ev=>ch.on('broadcast',{event:ev},m=>hs[ev]&&hs[ev]({isMe:false,data:m.payload})));
