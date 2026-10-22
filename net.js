@@ -46,7 +46,7 @@ function validSnap(s){
  const point=p=>!!p&&typeof p==='object'&&numRange(p.x,0,480)&&numRange(p.y,0,400);
  const age=v=>numRange(v,0,3600000);
  const validMotion=m=>!!m&&typeof m==='object'&&
-  (m.id==null||Number.isFinite(m.id))&&age(m.age)&&numRange(m.dur,0.001,3600000);
+  (m.id==null||Number.isFinite(m.id))&&age(m.age)&&(m.dur==null||numRange(m.dur,0.001,3600000));
  if(!s||typeof s!=='object'||!Number.isFinite(s.gid)||!intRange(s.seq,0,Number.MAX_SAFE_INTEGER)||
   !intRange(s.hostTeam,0,1)||!intRange(s.inn,1,20)||typeof s.top!=='boolean'||
   !intRange(s.N,1,20)||!intRange(s.outs,0,3)||!s.cnt||
@@ -74,7 +74,7 @@ function validSnap(s){
   (s.f.h!=null&&!Number.isFinite(s.f.h))))return false;
  if(s.mv!=null&&(!validMotion(s.mv)||!Array.isArray(s.mv.moves)||!Array.isArray(s.mv.stay)||
   s.mv.stay.some(v=>!intRange(v,0,3))||s.mv.moves.some(m=>!m||typeof m!=='object'||
-   !intRange(m.a,0,3)||!intRange(m.b,0,3)||!numRange(m.T,0.001,3600000)||
+   !intRange(m.a,0,3)||!intRange(m.b,0,4)||(m.T!=null&&!numRange(m.T,0.001,3600000))||
    (m.i!=null&&!intRange(m.i,0,FD.length-1))||(m.x!=null&&!numRange(m.x,0,480))||(m.y!=null&&!numRange(m.y,0,400)))))return false;
  if(s.th!=null&&(!validMotion(s.th)||!point(s.th.from)||!point(s.th.to)||
   (s.th.steps!=null&&(!Array.isArray(s.th.steps)||s.th.steps.length>20||s.th.steps.some(q=>!q||!point(q.from)||!point(q.to)||!numRange(q.dur,0.001,3600000)||(q.dly!=null&&!numRange(q.dly,0,3600000)))))))return false;
