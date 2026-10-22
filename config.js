@@ -4,7 +4,7 @@ const SUPA_URL='https://mbgdtwyhtiymmdoxuxwb.supabase.co',SUPA_KEY='eyJhbGciOiJI
 /* ---- 球種(d: 到達までのms / j: 狙いのブレ幅px) ---- */
 const TY={
  s:{d:930,j:8},
- sl:{d:1150,j:10},
+ sl:{d:1300,j:10},
  c:{d:1500,j:12},
  f:{d:1250,j:16},
  sh:{d:1200,j:10},
@@ -48,8 +48,12 @@ const CONFIG = {
   nearer: { s:false, sl:false, c:true, f:false, sh:false, cu:false }, // 方式A: 着地点とスイング時のボール位置の近い方を基準にする
   bonus: { s:false, sl:false, c:true, f:false, sh:true, cu:false }, // 方式B: ジャスト付近のミート度ボーナス
   bonusRadius: 16,
-  bonusMax: 0.25,
-  latePenalty: 0.5
+  bonusMax: { s:0, sl:0, c:0.85, f:0, sh:0.75, cu:0 },
+  latePenalty: { s:0, sl:0, c:0.50, f:0, sh:0.00, cu:0 }
+ },
+ pitchShape: {
+  c: { lowCut: { strength:0.7, startY:110, endY:176 } },
+  sh: { xBreak:41, breakStart:0.6 }
  },
  farZoneMissRate: 0.6,  // ゾーンから大きく外れた球(dist>=2)を振ったときの空振り率
  labelPerfectMs: 70,    // メッセージ表示のみ: この範囲内なら「タイミング：完璧」

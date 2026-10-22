@@ -4,6 +4,7 @@
 const rollW=o=>{let t=0;for(const k in o)t+=o[k];let r=Math.random()*t,last='fly';for(const k in o){last=k;if((r-=o[k])<0)return k}return last};
 
 const clamp01=v=>Math.max(0,Math.min(1,v));
+const pitchSetting=(value,type)=>typeof value==='number'?value:(value&&Number.isFinite(value[type])?value[type]:0);
 
 // ミート度(0〜1): タイミングとカーソルのズレから。1=ジャストでボールのど真ん中
 function meetOf(ms,dd){
@@ -20,9 +21,10 @@ function judgeRef(p,ms,curX,curY){
  const dd=Math.hypot(rx-curX,ry-curY),ballDist=Math.hypot(bx-lx,by-ly);
  const bonusOn=!!(J.bonus&&J.bonus[p.type]);
  const bq=bonusOn&&J.bonusRadius>0?clamp01(1-ballDist/J.bonusRadius):0;
- const bonusRate=bonusOn?Math.max(0,J.bonusMax||0)*bq:0;
+ const bonusRate=bonusOn?Math.max(0,pitchSetting(J.bonusMax,p.type))*bq:0;
  const lateRate=bonusOn&&ms>0?clamp01(ms/CONFIG.timingWindowMs):0;
- return {rx,ry,usedBall,dd,ballDist,bonusRate,lateRate};
+ const latePenalty=bonusOn?Math.max(0,pitchSetting(J.latePenalty,p.type)):0;
+ return {rx,ry,usedBall,dd,ballDist,bonusRate,lateRate,latePenalty};
 }
 const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak';
 
@@ -34,7 +36,7 @@ function batResult(p,ms,curX,curY){
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
  if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
  const baseMeet=meetOf(ms,dd),J=C.judge||{};
- const meet=J.bonus&&J.bonus[p.type]?Math.min(1,baseMeet*(1+judge.bonusRate))*(1-(J.latePenalty||0)*judge.lateRate):baseMeet;
+ const meet=J.bonus&&J.bonus[p.type]?Math.min(1,baseMeet*(1+judge.bonusRate))*(1-judge.latePenalty*judge.lateRate):baseMeet;
  const tier=tierOf(meet);
  const lift=(curY-judge.ry)/C.cursorSize,traj=lift>C.liftBand?'up':lift<-C.liftBand?'down':'flat';
  // 方向: タイミングだけで決まる(早い=引っ張り。右打者は画面左、左打者は右)。ミート度が低いほどブレる
