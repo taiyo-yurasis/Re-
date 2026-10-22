@@ -145,16 +145,27 @@ function showDetailMsg(k, ms, info) {
  setMsg(parts.join(' ｜ '));
 }
 
-function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
- if(k==='ball'){c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)}
- if(k==='look'||k==='miss'){c.s++;const m=k==='miss';
+function resultBall(ms,info){
+ const c=G.cnt;
+ c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)
+}
+
+function resultStrike(k,ms,info){
+ const c=G.cnt;
+ c.s++;const m=k==='miss';
   if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;addMatchPts(G.top?1:0,40);showDetailMsg(k, ms);return fin(1200)}
-  showDetailMsg(k, ms);return next(800)}
- if(k==='foul'){if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
+  showDetailMsg(k, ms);return next(800)
+}
+
+function resultFoul(ms,info){
+ const c=G.cnt;
+ if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
   banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
-  showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return}
- if(k==='gr'){
-  const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-35,35))*P/180,d=rnd(70,130);banner('ゴロ!');
+  showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return
+}
+
+function resultGround(ms,info){
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-35,35))*P/180,d=rnd(70,130);banner('ゴロ!');
   const gto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   const roll=Math.random();
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
@@ -189,14 +200,15 @@ function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
    }
    showDetailMsg('gr',ms,info);fin(800)
   },1);
-  const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return}
- if(k==='fly'){
-  const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=rnd(160,270);banner('フライ!');
+  const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return
+}
+
+function resultFly(ms,info){
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=rnd(160,270);banner('フライ!');
   const fto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info);
   const isFinePlay=Math.random()<CONFIG.finePlayFly;
-  const thirdOutAtContact=G.outs===2;
-  if(thirdOutAtContact){
+  if(G.outs===2){
    const targets={};
    for(let b=1;b<=3;b++)if(G.bases[b])targets[b]=b===3?3:b+1;
    applyRunnerResult(settle(targets));
@@ -221,9 +233,17 @@ function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
    showDetailMsg('fly',ms,info);
    fin(1000);
   },1,isFinePlay?{diving:true}:null);
-  return;}
-
- hit(k,ms,info)}
+  return;
+}
+function result(k,ms,info){
+ if(G.prac)return pracResult(k,ms,info);
+ if(k==='ball')return resultBall(ms,info);
+ if(k==='look'||k==='miss')return resultStrike(k,ms,info);
+ if(k==='foul')return resultFoul(ms,info);
+ if(k==='gr')return resultGround(ms,info);
+ if(k==='fly')return resultFly(ms,info);
+ return hit(k,ms,info);
+}
 
 function nrst(to,ids){let m=1e9,r=ids[0];ids.forEach(j=>{const q=Math.hypot(FD[j][0]-to.x,FD[j][1]-to.y);if(q<m){m=q;r=j}});return r}
 
