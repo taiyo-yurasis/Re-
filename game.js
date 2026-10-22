@@ -47,7 +47,7 @@ function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.
    const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];let x,y;
    if(Math.random()<.62){x=rnd(52,168);y=rnd(52,168)}else{x=rnd(20,200);y=rnd(20,200)}
    throwP(t,x,y)})}
- else{G.phase='aim';resetPitchOffset();setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
+ else{G.phase='aim';setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
 function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;
  if(G.net==='guest')return;if(G.net||batHuman()){const limit=1+CONFIG.timingWindowMs/p.dur+(G.net&&!canBat()?500/p.dur:0);if(p.t>limit){G.phase='busy';take()}}

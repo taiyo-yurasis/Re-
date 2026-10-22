@@ -63,7 +63,7 @@ function netStart(rm){
  rm.on('throw',m=>{const d=m.data;if(!m.isMe&&G.net==='host'&&G.phase==='aim'&&!canPit()&&d){
   const type=typeof d.type==='string'&&Object.hasOwn(TY,d.type)?d.type:'s';
   const pos=v=>{const n=Number(v);return Number.isFinite(n)?cl(n,0,220):110};
-  throwP(type,pos(d.x),pos(d.y));
+  throwP(type,pos(d.x),pos(d.y),true);
  }});
  rm.on('swing',m=>{if(!m.isMe&&G.net==='host'&&!canBat())remoteSwing(m.data)});
  rm.on('hello',m=>{const d=m.data;if(!m.isMe&&G.net==='hosting'&&d&&d.room===roomCode){

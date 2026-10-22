@@ -39,7 +39,7 @@ addEventListener('pointerup',e=>{const w=e.pointerType==='mouse'?mdown:lastT;mdo
 addEventListener('pointercancel',()=>{lastT=null;mdown=false});
 $('sw').addEventListener('pointerdown',e=>{e.preventDefault();pitchNow()});
 
-document.querySelectorAll('.pt').forEach(b=>b.addEventListener('click',()=>{G.sel=b.dataset.t;if(G.phase==='aim')resetPitchOffset();updateHud()}));
+document.querySelectorAll('.pt').forEach(b=>b.addEventListener('click',()=>{if(G.phase!=='aim'||!canPit())return;G.sel=b.dataset.t;updateHud()}));
 $('tg1').addEventListener('click',()=>{
  $('tg1').classList.add('on');$('tg2').classList.remove('on');
  $('p_group1').style.display='flex';$('p_group2').style.display='none';
