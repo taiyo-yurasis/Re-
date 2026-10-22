@@ -65,6 +65,10 @@ document.querySelectorAll('[data-cpu-first]').forEach(b=>b.addEventListener('cli
 }));
 
 addEventListener('keydown',e=>{
+ if(e.repeat)return;
+ const target=e.target;
+ if(target instanceof Element&&target.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]'))return;
+ if($('ov').style.display!=='none'||$('patch-ov')?.classList.contains('open'))return;
  if(e.code==='Space'||e.key==='Enter'){e.preventDefault();act()}
 });
 document.querySelectorAll('#ov [data-n]').forEach(b=>b.addEventListener('click',()=>{

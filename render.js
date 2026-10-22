@@ -141,4 +141,15 @@ function drawZone(){const u=44,c=zx;
  c.strokeStyle='#5ef0ff';c.lineWidth=2;c.beginPath();c.arc(q.x,q.y,rr,0,7);c.stroke();
  c.beginPath();c.moveTo(q.x-rr-6,q.y);c.lineTo(q.x+rr+6,q.y);c.moveTo(q.x,q.y-rr-6);c.lineTo(q.x,q.y+rr+6);c.stroke()
 }
-function loop(){const now=performance.now();update(now);cx.clearRect(0,0,cv.width,cv.height);drawField(now);drawZone();ctl();requestAnimationFrame(loop)}
+let lastLoopErrorAt=0;
+function reportLoopError(error,stage){
+ const now=performance.now();
+ if(now-lastLoopErrorAt>3000){console.error('野球盤 STADIUM: '+stage+'でエラーが発生しました',error);lastLoopErrorAt=now}
+}
+function loop(){
+ requestAnimationFrame(loop);
+ const now=performance.now();
+ try{update(now)}catch(error){reportLoopError(error,'ゲーム更新')}
+ try{cx.clearRect(0,0,cv.width,cv.height);drawField(now);drawZone()}catch(error){reportLoopError(error,'描画')}
+ try{ctl()}catch(error){reportLoopError(error,'操作UI更新')}
+}
