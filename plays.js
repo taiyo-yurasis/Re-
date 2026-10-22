@@ -11,6 +11,26 @@ function throwPlan(to, targetBase){
  return {steps, mv};
 }
 
+// 打球結果と打つ前の走者配置から送球先を決める。4は本塁、0は送球なし。
+// 二塁打で二塁/三塁が候補になる2ケースだけ、50:50で選ぶ。
+function chooseHitThrowBase(kind){
+ if(kind==='HR')return 0;
+ const key=[1,2,3].map(b=>G.bases[b]?1:0).join('');
+ const plans={
+  '000':{'1B':2,'2B':[2,3],'3B':3},
+  '100':{'1B':3,'2B':4,'3B':4},
+  '110':{'1B':4,'2B':4,'3B':4},
+  '010':{'1B':4,'2B':4,'3B':3},
+  '001':{'1B':2,'2B':[2,3],'3B':3},
+  '101':{'1B':3,'2B':4,'3B':4},
+  '011':{'1B':4,'2B':4,'3B':3},
+  '111':{'1B':4,'2B':4,'3B':4}
+ };
+ const target=plans[key]?.[kind];
+ if(Array.isArray(target))return Math.random()<0.5?target[0]:target[1];
+ return target??0;
+}
+
 function flight(to,kind,cb,out,o){const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6;
  G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,h:kind==='hr'?130:30+d*.35,...(o||{})};sync();later(dur+250,cb)}
 function next(ms){updateHud();later(ms,ready)}
@@ -46,7 +66,12 @@ function safeAtFirst(kind,to,ms,isHit,info){
   if(isHit){G.hits[G.top?0:1]++;addMatchPts(G.top?0:1,300+300*r);banner('内野安打!');showDetailMsg('ih',ms,info)}
   else{banner('エラー!');showDetailMsg('err',ms,info)}
   score(r);
-  if(ground&&G.fl)G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[1],dur:380,dly:200}],currentStep:0};
+  if(r)banner(`+${r}点!`);
+  if(G.fl){
+   const pl=throwPlan(G.fl.to,1);
+   G.th={id:++pid,t0:performance.now(),steps:pl.steps};
+   if(pl.mv.length)G.rl={id:++pid,t0:performance.now(),moves:pl.mv};
+  }
   fin(800)},1);
 }
 
@@ -77,7 +102,7 @@ function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let 
  }
  nb[1]=1;
  G.bases=[0,nb[1],nb[2],nb[3]];
- G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};addMatchPts(G.top?0:1,50+300*r);score(r)}
+ G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};addMatchPts(G.top?0:1,50+300*r);score(r);if(r)banner(`+${r}点!`)}
 
 function showDetailMsg(k, ms, info) {
  const p = G.pitch;
@@ -135,6 +160,8 @@ function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',()=>{
    G.outs++;let m='ゴロアウト';if(dp){G.outs++;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}
    score(r);
+   banner(m);
+   if(r)banner(`+${r}点!`);
    if(G.fl) {
     if(dp) {
      G.th = {
@@ -150,21 +177,25 @@ function result(k,ms,info){if(G.prac)return pracResult(k,ms,info);const c=G.cnt;
      G.th = {id:++pid, t0:performance.now(), dur:380, from:G.fl.to, to:BS[1]};
     }
    }
-   banner(m);showDetailMsg('gr', ms, info);fin(800)},1);
+   showDetailMsg('gr', ms, info);fin(800)},1);
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return}
  if(k==='fly'){const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=rnd(160,270);banner('フライ!');
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',{x:240+d*Math.sin(a),y:375-d*Math.cos(a)},ms,false,info);
   
   const isFinePlay = Math.random() < CONFIG.finePlayFly;
   
+  const thirdOutAtContact=G.outs===2;
+  if(thirdOutAtContact)adv(1,false);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'fly',()=>{
    G.outs++;
    let m = isFinePlay ? 'ファインプレー!!' : 'フライアウト';
-   if(G.outs>=3)adv(1,false);
+   let scoredRuns=0;
+   if(G.outs>=3){/* 走者は打球時点で進塁を開始済み。第3アウト後の追加進塁・得点は行わない。 */}
    else if(!isFinePlay){const C=CONFIG;let sf=false;
-    if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);addMatchPts(G.top?0:1,450);score(1);sf=true;m='犠牲フライ!'}
+    if(G.bases[3]&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate)){G.bases[3]=0;mvAdd({a:3,b:4});G.mv.stay=G.mv.stay.filter(x=>x!==3);addMatchPts(G.top?0:1,450);scoredRuns=1;sf=true;m='犠牲フライ!'}
     if(G.bases[2]&&!G.bases[3]&&d>=C.tagUpDepth&&Math.random()<C.tagUpSecondRate){G.bases[2]=0;mvAdd({a:2,b:3});G.bases[3]=1;G.mv.stay=G.mv.stay.filter(x=>x!==2);if(!sf)m='タッチアップ!'}}
    banner(m, isFinePlay ? 'hr' : '');
+   if(scoredRuns){score(scoredRuns);banner(`+${scoredRuns}点!`);}
    showDetailMsg('fly', ms, info);
    fin(1000);
   }, 1, isFinePlay ? {diving:true} : null);
@@ -200,7 +231,7 @@ function hit(k, ms, info) {
  let r = 0;
  const mvs = [];
  const stay = [];
- let targetBaseForThrow = 2;
+ const targetBaseForThrow = chooseHitThrowBase(k);
  
  r = n<=2 ? advRand(k, true) : adv(n, true);
  const batTeam=G.top?0:1;
@@ -208,7 +239,6 @@ function hit(k, ms, info) {
  addMatchPts(batTeam,hitPts+300*r);
  const advanced = G.mv;
  if(advanced){mvs.push(...advanced.moves);stay.push(...advanced.stay)}
- targetBaseForThrow = n===4 ? 0 : n;
  G.mv = mvs.length ? {id: ++pid, t0: performance.now(), dur: Math.max(...mvs.map(m => (m.b - m.a) * 580)), moves: mvs, stay} : null;
 
  const o = edge ? {fi: nrst(to, [6, 8]), ri: nrst(to, [2, 5])} : k === '1B' ? {fi: nrst(to, [6, 7, 8]), ...(ground ? {ri: nrst(to, [0, 2, 3, 4, 5])} : {h: 22})} : (k === '2B' || k === '3B') ? {fi: nrst(to, [6, 7, 8]), wall} : null;
