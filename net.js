@@ -82,8 +82,9 @@ function validSnap(s){
   s.mv.stay.some(v=>!intRange(v,0,3))||s.mv.moves.some(m=>!m||typeof m!=='object'||
    !intRange(m.a,0,3)||!intRange(m.b,0,4)||(m.T!=null&&!numRange(m.T,0.001,3600000))||
    (m.i!=null&&!intRange(m.i,0,FD.length-1))||(m.x!=null&&!numRange(m.x,0,480))||(m.y!=null&&!numRange(m.y,0,400)))))return false;
- if(s.th!=null&&(!validMotion(s.th)||!point(s.th.from)||!point(s.th.to)||
-  (s.th.steps!=null&&(!Array.isArray(s.th.steps)||s.th.steps.length>20||s.th.steps.some(q=>!q||!point(q.from)||!point(q.to)||!numRange(q.dur,0.001,3600000)||(q.dly!=null&&!numRange(q.dly,0,3600000)))))))return false;
+ if(s.th!=null&&(!s.th||typeof s.th!=='object'||!intRange(s.th.id,0,Number.MAX_SAFE_INTEGER)||!age(s.th.age)||
+  (s.th.steps!=null?(!Array.isArray(s.th.steps)||s.th.steps.length>20||s.th.steps.some(q=>!q||!point(q.from)||!point(q.to)||!numRange(q.dur,0.001,3600000)||(q.dly!=null&&!numRange(q.dly,0,3600000)))):
+   (!point(s.th.from)||!point(s.th.to)||!numRange(s.th.dur,0.001,3600000)))))return false;
  if(s.rl!=null&&(!s.rl||typeof s.rl!=='object'||!intRange(s.rl.id,0,Number.MAX_SAFE_INTEGER)||!age(s.rl.age)||
   !Array.isArray(s.rl.moves)||s.rl.moves.length>4||s.rl.moves.some(m=>!m||!intRange(m.i,0,FD.length-1)||
    !numRange(m.T,0.001,3600000)||!numRange(m.x,0,480)||!numRange(m.y,0,400))))return false;
