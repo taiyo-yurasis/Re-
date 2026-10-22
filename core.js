@@ -4,6 +4,11 @@ const cv=$('f'),cx=cv.getContext('2d'),zc=$('z'),zx=zc.getContext('2d');
 const HP={x:240,y:375},R=320,P=Math.PI,TC=['#ff5a5f','#4da3ff'];
 const BS=[0,{x:311,y:304},{x:240,y:234},{x:169,y:304}];
 const FD=[[240,292],[240,392],[322,300],[285,245],[195,245],[158,300],[120,170],[240,125],[360,170]];
+function outfieldTarget(to){
+ const dx=to.x-HP.x,dy=to.y-HP.y,len=Math.hypot(dx,dy);
+ if(len>=190||len===0)return{x:to.x,y:to.y};
+ return{x:HP.x+dx/len*190,y:HP.y+dy/len*190};
+}
 
 let pid=0;
 let G={id:0};
