@@ -41,37 +41,11 @@ function baseball(c,x,y,r,spin){
 const FSPD=.07;
 function fpos(i,now){const b=FD[i],f=G.fl;
  if(G.rl){const m=G.rl.moves.find(q=>q.i===i);if(m){const e=Math.min(1,Math.max(0,(now-G.rl.t0)/m.T)),k=1-(1-e)*(1-e);return[b[0]+(m.x-b[0])*k,b[1]+(m.y-b[1])*k]}}
- if(!f)return b;
- if(f.fi===undefined){
-  let m=1e9;
-  let candidateIndices = [];
-  if(f.kind === 'ground') {
-   candidateIndices = [2,3,4,5];
-   const distToMound = Math.hypot(f.to.x - 240, f.to.y - 310);
-   if(distToMound < 50) candidateIndices.push(0);
-  } else {
-   candidateIndices = [6,7,8,2,3,4,5];
-  }
-  candidateIndices.forEach(j=>{
-   const q=FD[j];
-   const d=Math.hypot(q[0]-f.to.x,q[1]-f.to.y);
-   if(d<m){m=d;f.fi=j}
-  });
- }
+ if(!f||f.fi===undefined)return b;
  if(i===f.ri){const q=Math.hypot(f.to.x-b[0],f.to.y-b[1])||1,e=Math.min(1,(now-f.t0)/450);return[b[0]+(f.to.x-b[0])/q*16*e,b[1]+(f.to.y-b[1])/q*16*e]}
  if(i!==f.fi)return b;
  
- let targetTo = {x: f.to.x, y: f.to.y};
- if (f.isHit && i >= 6) {
-  const dx = f.to.x - HP.x;
-  const dy = f.to.y - HP.y;
-  const dist = Math.hypot(dx, dy);
-  const minDistance = 190;
-  if (dist < minDistance) {
-   targetTo.x = HP.x + (dx / dist) * minDistance;
-   targetTo.y = HP.y + (dy / dist) * minDistance;
-  }
- }
+ const targetTo = f.isHit && i >= 6 ? outfieldTarget(f.to) : f.to;
 
  const dx=targetTo.x-HP.x,dy=targetTo.y-HP.y,k=Math.min(1,(R-14)/Math.hypot(dx,dy)),tx=HP.x+dx*k,ty=HP.y+dy*k,d=Math.hypot(tx-b[0],ty-b[1]);
  let T=d/FSPD;if(f.out)T=Math.min(T,f.dur*.92);
