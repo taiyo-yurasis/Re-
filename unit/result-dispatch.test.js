@@ -51,7 +51,7 @@ test('settle keeps runners in distinct bases and counts a runner crossing home',
   const result = context.settle({ 1: 2, 2: 3, 3: 4 });
   assert.deepEqual(Array.from(result.bases), [0, 0, 1, 1]);
   assert.equal(result.runs, 1);
-  assert.deepEqual(result.moves.map(({ a, b }) => [a, b]), [[3, 4], [2, 3], [1, 2]]);
+  assert.deepEqual(Array.from(result.moves, ({ a, b }) => [a, b]), [[3, 4], [2, 3], [1, 2]]);
 });
 
 test('settle resolves collisions without placing two runners on one base', () => {
