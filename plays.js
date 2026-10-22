@@ -31,8 +31,16 @@ function chooseHitThrowBase(kind){
  return target??0;
 }
 
-function flight(to,kind,cb,out,o){const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6;
- G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,h:kind==='hr'?130:30+d*.35,...(o||{})};sync();later(dur+250,cb)}
+function pickFielder(to,kind){
+ const candidates=kind==='ground'?[2,3,4,5]:[6,7,8,2,3,4,5];
+ if(kind==='ground'&&Math.hypot(to.x-240,to.y-310)<50)candidates.push(0);
+ return nrst(to,candidates);
+}
+function flight(to,kind,cb,out,o){
+ const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6,opts=o||{};
+ G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,fi:opts.fi??pickFielder(to,kind),h:kind==='hr'?130:30+d*.35,...opts};
+ sync();later(dur+250,cb)
+}
 function next(ms){updateHud();later(ms,ready)}
 function fin(ms){if(G.th&&G.th.steps)ms=Math.max(ms,G.th.steps.reduce((a,q)=>a+(q.dly||0)+q.dur,0)-(performance.now()-G.th.t0)+400);if(G.mv)ms=Math.max(ms,G.mv.dur-(performance.now()-G.mv.t0)+350);G.cnt={b:0,s:0};if(!G.walkoff&&G.outs<3)selectNextBatterSide();updateHud();
  if(G.walkoff)return later(Math.max(1500,ms),over);
@@ -44,18 +52,24 @@ function rpos(a,b,p){const Q=[HP,BS[1],BS[2],BS[3],HP],L=[];let T=0;for(let i=a;
  let d=T*p;for(let i=a;i<b;i++){const l=L[i-a];if(d<=l||i===b-1){const t=l?Math.min(1,d/l):1;return[Q[i].x+(Q[i+1].x-Q[i].x)*t,Q[i].y+(Q[i+1].y-Q[i].y)*t]}d-=l}}
 function mvAdd(m){const t=performance.now();if(!G.mv||t-G.mv.t0>G.mv.dur)G.mv={id:++pid,t0:t,dur:0,moves:[],stay:[1,2,3].filter(b=>G.bases[b])};G.mv.moves.push(m);G.mv.dur=Math.max(G.mv.dur,m.T||(m.b-m.a)*580)}
 
-function adv(n,bat){let r=0;const nb=[0,0,0,0],mvs=[],stay=[];
- for(let b=3;b>=1;b--){if(!G.bases[b])continue;let t=b+n;if(t>=4){r++;mvs.push({a:b,b:4});continue}while(t>b&&nb[t])t--;nb[t]=1;t>b?mvs.push({a:b,b:t}):stay.push(b)}
- if(bat){if(n>=4){r++;mvs.push({a:0,b:4})}else{let p=n;while(p>1&&nb[p])p--;nb[p]=1;mvs.push({a:0,b:p})}}
- G.bases=nb;G.mv=mvs.length?{id:++pid,t0:performance.now(),dur:Math.max(...mvs.map(m=>(m.b-m.a)*580)),moves:mvs,stay}:null;return r}
+function adv(n,bat){
+ const targets={};
+ for(let b=1;b<=3;b++)if(G.bases[b])targets[b]=b+n;
+ const result=settle(targets,bat?n:null);
+ applyRunnerResult(result);
+ return result.runs;
+}
 
 // 打者が一塁セーフになるプレー用の進塁(エラー/内野安打)。走者は押し出される分だけ進む。T=全員の走塁時間(ms)。得点数を返す(加点は呼び出し側)
-function forceAdv(T){const B=G.bases,old=[1,2,3].filter(b=>B[b]),nb=[0,1,0,0],mvs=[{a:0,b:1,T}];let r=0;
- if(B[1]){mvs.push({a:1,b:2,T});nb[2]=1;
-  if(B[2]){mvs.push({a:2,b:3,T});nb[3]=1;if(B[3]){r++;mvs.push({a:3,b:4,T})}}
-  else if(B[3])nb[3]=1;
- }else{if(B[2])nb[2]=1;if(B[3])nb[3]=1}
- G.bases=nb;G.mv={id:++pid,t0:performance.now(),dur:T,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};return r}
+function forceAdv(T){
+ const targets={};
+ if(G.bases[1])targets[1]=2;
+ if(G.bases[2])targets[2]=G.bases[1]?3:2;
+ if(G.bases[3])targets[3]=G.bases[1]&&G.bases[2]?4:3;
+ const result=settle(targets,1,{T});
+ applyRunnerResult(result,T);
+ return result.runs;
+}
 
 // 打球がアウトにならず打者が一塁に残る: isHit=true→内野安打(安打+1)、false→エラー(安打にならない)
 // ゴロは野手がもたつく(送球が遅れる)ので、走者が先に一塁へ着く
@@ -76,33 +90,23 @@ function safeAtFirst(kind,to,ms,isHit,info){
 }
 
 // 元からいた走者を確率で進塁させる(打者は1B/2Bのときだけ bat=true で加える)。kind: '1B' | '2B' | 'gr'
-function advRand(kind,bat){const C=CONFIG,nb=[0,0,0,0],mvs=[],stay=[];let r=0;
- for(let b=3;b>=1;b--){if(!G.bases[b])continue;
-  let t;
-  if(kind==='1B')t=b===3?4:b===2?(Math.random()<C.run1BSecondHome?4:3):(Math.random()<C.run1BFirstThird?3:2);
-  else if(kind==='2B')t=b>=2?4:(Math.random()<C.run2BFirstHome?4:3);
-  else t=b===3?(Math.random()<C.runGrThirdHome?4:3):b===2?(Math.random()<C.runGrSecondThird?3:2):2;
-  if(t>=4){r++;mvs.push({a:b,b:4});continue}
-  while(t>b&&nb[t])t--;
-  nb[t]=1;t>b?mvs.push({a:b,b:t}):stay.push(b)}
- if(bat){let p=kind==='2B'?2:1;while(p>1&&nb[p])p--;nb[p]=1;mvs.push({a:0,b:p})}
- G.bases=nb;G.mv=mvs.length?{id:++pid,t0:performance.now(),dur:Math.max(...mvs.map(m=>(m.b-m.a)*580)),moves:mvs,stay}:null;return r}
-
-function walk(){const B=G.bases,old=[1,2,3].filter(b=>B[b]),mvs=[{a:0,b:1}];let r=0;
- const nb=[0,0,0,0];
- if(B[1]){
-  mvs.push({a:1,b:2});nb[2]=1;
-  if(B[2]){
-   mvs.push({a:2,b:3});nb[3]=1;
-   if(B[3]){r++;mvs.push({a:3,b:4})}
-  }else if(B[3])nb[3]=1;
- }else{
-  if(B[2])nb[2]=1;
-  if(B[3])nb[3]=1;
+function advRand(kind,bat){
+ const C=CONFIG,targets={};
+ for(let b=1;b<=3;b++){
+  if(!G.bases[b])continue;
+  if(kind==='1B')targets[b]=b===3?4:b===2?(Math.random()<C.run1BSecondHome?4:3):(Math.random()<C.run1BFirstThird?3:2);
+  else if(kind==='2B')targets[b]=b>=2?4:(Math.random()<C.run2BFirstHome?4:3);
+  else targets[b]=b===3?(Math.random()<C.runGrThirdHome?4:3):b===2?(Math.random()<C.runGrSecondThird?3:2):2;
  }
- nb[1]=1;
- G.bases=[0,nb[1],nb[2],nb[3]];
- G.mv={id:++pid,t0:performance.now(),dur:580,moves:mvs,stay:old.filter(b=>!mvs.some(m=>m.a===b))};addMatchPts(G.top?0:1,50+300*r);score(r);if(r)banner(`+${r}点!`)}
+ const result=settle(targets,bat?(kind==='2B'?2:1):null);
+ applyRunnerResult(result);
+ return result.runs;
+}
+
+function walk(){
+ const r=forceAdv(580);
+ addMatchPts(G.top?0:1,50+300*r);score(r);if(r)banner(`+${r}点!`)
+}
 
 function showDetailMsg(k, ms, info) {
  const p = G.pitch;
@@ -229,32 +233,18 @@ function hit(k, ms, info) {
  }
 
  let r = 0;
- const mvs = [];
- const stay = [];
  const targetBaseForThrow = chooseHitThrowBase(k);
  
  r = n<=2 ? advRand(k, true) : adv(n, true);
  const batTeam=G.top?0:1;
  const hitPts=k==='1B'?300:k==='2B'?600:k==='3B'?1000:[1200,1500,2000,2500][Math.min(4,Math.max(1,r))-1];
  addMatchPts(batTeam,hitPts+300*r);
- const advanced = G.mv;
- if(advanced){mvs.push(...advanced.moves);stay.push(...advanced.stay)}
- G.mv = mvs.length ? {id: ++pid, t0: performance.now(), dur: Math.max(...mvs.map(m => (m.b - m.a) * 580)), moves: mvs, stay} : null;
-
  const o = edge ? {fi: nrst(to, [6, 8]), ri: nrst(to, [2, 5])} : k === '1B' ? {fi: nrst(to, [6, 7, 8]), ...(ground ? {ri: nrst(to, [0, 2, 3, 4, 5])} : {h: 22})} : (k === '2B' || k === '3B') ? {fi: nrst(to, [6, 7, 8]), wall} : null;
  G.hits[G.top ? 0 : 1]++;
  banner({'1B':'ヒット!','2B':'ツーベース!','3B':'スリーベース!',HR:'ホームラン!!'}[k], k==='HR'?'hr':'');
  showDetailMsg(k, ms, info);
  
- let actualTo = {x: to.x, y: to.y};
- const fi = nrst(to, [6, 7, 8]);
- if (fi >= 6) {
-  const dx = to.x - HP.x, dy = to.y - HP.y, dist = Math.hypot(dx, dy);
-  if (dist < 190) {
-   actualTo.x = HP.x + (dx / dist) * 190;
-   actualTo.y = HP.y + (dy / dist) * 190;
-  }
- }
+ const actualTo = outfieldTarget(to);
 
  const pl = targetBaseForThrow === 0 ? null : throwPlan(actualTo, targetBaseForThrow);
  
