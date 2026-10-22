@@ -16,6 +16,7 @@ function createPlaysContext() {
   };
   vm.createContext(context);
   vm.runInContext(playsSource, context);
+  context.hit = () => 'hit';
   for (const name of ['resultBall', 'resultStrike', 'resultFoul', 'resultGround', 'resultFly']) {
     context[name] = () => name;
   }
