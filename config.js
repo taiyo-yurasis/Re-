@@ -49,7 +49,7 @@ const CONFIG = {
   bonus: { s:false, sl:false, c:true, f:false, sh:true, cu:false }, // 方式B: ジャスト付近のミート度ボーナス
   bonusRadius: 16,
   bonusMax: { s:0, sl:0, c:0.85, f:0, sh:0.75, cu:0 },
-  latePenalty: { s:0, sl:0, c:0.50, f:0, sh:0.00, cu:0 }
+  latePenalty: { s:0, sl:0, c:0.50, f:0, sh:0.50, cu:0 }
  },
  pitchShape: {
   c: { lowCut: { strength:0.7, startY:110, endY:176 } },
