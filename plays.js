@@ -146,16 +146,19 @@ function showDetailMsg(k, ms, info) {
 }
 
 function resultBall(ms,info){
+ const c=G.cnt;
  c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)
 }
 
 function resultStrike(k,ms,info){
+ const c=G.cnt;
  c.s++;const m=k==='miss';
   if(c.s>=3){banner(m?'空振り三振!':'見逃し三振!');G.outs++;addMatchPts(G.top?1:0,40);showDetailMsg(k, ms);return fin(1200)}
   showDetailMsg(k, ms);return next(800)
 }
 
 function resultFoul(ms,info){
+ const c=G.cnt;
  if(c.s<2)c.s++;const hasA=info&&info.angle!=null,ad=hasA?cl(Math.abs(info.angle),46,78):rnd(46,78),a=(hasA?(info.angle<0?-1:1):(Math.random()<.5?-1:1))*ad*P/180,d=rnd(90,200),to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)},cp=ad<66?(66-ad)/20*.6:0;
   banner('ファウル');if(Math.random()<cp){banner('ファウルフライ!');flight(to,'fly',()=>{G.outs++;banner('ファウルフライアウト');showDetailMsg('foul', ms, info);fin(1000)},1);return}
   showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return
@@ -205,8 +208,7 @@ function resultFly(ms,info){
   const fto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info);
   const isFinePlay=Math.random()<CONFIG.finePlayFly;
-  const thirdOutAtContact=G.outs===2;
-  if(thirdOutAtContact){
+  if(G.outs===2){
    const targets={};
    for(let b=1;b<=3;b++)if(G.bases[b])targets[b]=b===3?3:b+1;
    applyRunnerResult(settle(targets));
