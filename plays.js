@@ -200,6 +200,13 @@ function resultGround(ms,info){
    }
    showDetailMsg('gr',ms,info);fin(800)
   },1);
+  // 一塁手(守備位置2)がゴロを処理した場合、投手(守備位置0)が一塁をカバーする。
+  // 送球演出が一塁へ向かう間にカバーが間に合うよう、守備位置の移動を表示する。
+  if(G.fl && G.fl.fi===2){
+   const from={x:FD[0][0],y:FD[0][1]},to=BS[1];
+   const T=Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/.12);
+   G.rl={id:++pid,t0:performance.now(),moves:[{i:0,x:to.x,y:to.y,T}]};
+  }
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return
 }
 

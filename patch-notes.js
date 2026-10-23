@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.1.0';
+  const currentVersion = '1.1.1';
   const updates = [
+    {
+      version: '1.1.1',
+      title: '守備の不具合を修正',
+      changes: [
+        '一塁手がゴロを捕球して一塁を離れた際、投手が一塁をカバーするようにしました。'
+      ]
+    },
     {
       version: '1.1.0',
       title: '打撃システムを物理モデルに刷新',
