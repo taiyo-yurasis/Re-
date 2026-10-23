@@ -1,7 +1,15 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.0.13';
+  const currentVersion = '1.0.14';
   const updates = [
+    {
+      version: '1.0.14',
+      title: 'CPU難易度と共通打撃判定を追加',
+      changes: [
+        'CPUの投球・打撃に4段階の難易度設定を追加しました。',
+        'CPUの打撃結果をプレイヤーと共通の batResult() で判定するようにしました。'
+      ]
+    },
     {
       version: '1.0.13',
       title: '試合結果の処理を整理',
