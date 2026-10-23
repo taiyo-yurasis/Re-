@@ -30,6 +30,21 @@ const CPU_DIFFICULTY = {
 
 /* ---- 固定ゲーム設定(バランス調整はここ) ---- */
 const CONFIG = {
+ batMode: 'physics',       // 'physics' = 打球物理モデル / 'table' = 従来の hitTable
+ physicsCorrectionScale: 0.5, // 物理モデルでの球種ボーナス・遅れ補正の倍率
+ courseIdealMs: 25,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)
+ dirCourseDeg: 28,          // コースによる打球方向の角度(deg)
+ meetVertWeight: 0.4,       // ミート距離における上下ズレの重み
+ meetNoiseX: 0.08,          // 横ズレに応じたミート度のランダム幅
+ phys: {
+  baseAng: 14, angK: 55, dead: 0.15, nAng: 8,
+  spdMin: 75, spdRange: 100, spdLoss: 0.6, nSpd: 6,
+  distK: 0.8,
+  groundAng: 10, linerAng: 25,
+  gHitFrom: 30, gHitTo: 130, gHitMax: 0.4,
+  inField: 38, hitMax: 55, hrMin: 75,
+  tripleRatio: 0.7
+ },
  cursorSize: 16,        // ミート判定: カーソルとボールの許容距離(px)
  finePlayFly: 0.22,     // フライがファインプレーになる確率
  finePlayHit: 0.1,      // 1B/2Bの当たりがファインプレーで取られる確率
