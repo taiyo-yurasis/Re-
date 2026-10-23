@@ -20,6 +20,14 @@ const TY_NAMES = {
  cu: 'チェンジアップ'
 };
 
+/* ---- CPU難易度(1=初心者〜4=最強) ---- */
+const CPU_DIFFICULTY = {
+ 1: { pitchAimError:24, timingError:145, positionError:22, swingZone:.62, swingEdge:.52, swingOutside:.30 },
+ 2: { pitchAimError:16, timingError:110, positionError:16, swingZone:.80, swingEdge:.70, swingOutside:.20 },
+ 3: { pitchAimError:10, timingError:75, positionError:10, swingZone:.88, swingEdge:.80, swingOutside:.12 },
+ 4: { pitchAimError:6, timingError:48, positionError:6, swingZone:.93, swingEdge:.86, swingOutside:.08 }
+};
+
 /* ---- 固定ゲーム設定(バランス調整はここ) ---- */
 const CONFIG = {
  cursorSize: 16,        // ミート判定: カーソルとボールの許容距離(px)
@@ -102,7 +110,4 @@ const CONFIG = {
   }
  },
 
- /* ---- CPUの打撃 ---- */
- cpuFoulRate: 0.12,     // CPUが当てたうちファウルになる割合
- cpuHitTable: {HR:25,'2B':25,'1B':25,gr:15,fly:10}   // CPUが打ったときの当たり(重み)
 };
