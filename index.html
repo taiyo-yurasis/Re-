@@ -16,7 +16,7 @@
  <div class="ct">
   <canvas id="z" width="220" height="220"></canvas>
   <div class="bs">
-   <div id="hint"><b>🏏 打撃</b>画面をドラッグでカーソル移動。ボールが届く位置に置いて、届く<b>瞬間に離して</b>スイング!<br>(PC: クリックを離す / Space)</div>
+   <div id="hint"></div>
    <button id="sw" class="bt">投げる!<small>クリック / Space</small></button>
    <div id="pts">
     <div class="pt-row">
@@ -80,8 +80,11 @@
  <div class="row" id="n-row"><button class="bt" data-n="3">3回戦で遊ぶ</button><button class="bt" data-n="5">5回戦で遊ぶ</button></div>
  <div class="row" id="room-row"><input id="code" placeholder="合言葉(英数6桁)"><button class="bt" id="jn">部屋に入る</button><button class="bt" id="cancel-room" style="display:none">キャンセル</button></div>
  <div class="patch-footer">
-  <button class="bt sm patch-trigger" id="patch-notes-button" type="button">パッチノート</button>
-  <div class="version" id="current-version">Ver.1.0.14</div>
+  <div class="patch-actions">
+   <button class="bt sm patch-trigger" id="patch-notes-button" type="button">パッチノート<span id="patch-notes-badge" class="patch-badge" hidden>NEW</span></button>
+   <button class="bt sm patch-trigger" id="rules-button" type="button">ルール説明</button>
+  </div>
+  <div class="version" id="current-version">Ver.1.0.15</div>
  </div>
 </div></div>
 <div id="patch-ov" aria-hidden="true">
@@ -94,6 +97,50 @@
    <button class="bt sm patch-close" id="patch-close" type="button" aria-label="パッチノートを閉じる">×</button>
   </header>
   <div id="patch-list"></div>
+ </section>
+</div>
+<div id="rules-ov" aria-hidden="true">
+ <section id="rules-card" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+  <header class="patch-header">
+   <div>
+    <h2 id="rules-title">ルール説明</h2>
+    <p>野球盤 STADIUM の操作方法</p>
+   </div>
+   <button class="bt sm rules-close" id="rules-close" type="button" aria-label="ルール説明を閉じる">×</button>
+  </header>
+  <div id="rules-content">
+   <section>
+    <h3>投球方法</h3>
+    <ul>
+     <li>球種を選び、投球カーソルを動かしてコースを狙います。</li>
+     <li>「投げる!」ボタンを押すと投球します。PCではSpaceキーまたはEnterキーでも操作できます。</li>
+     <li>投球中は球種を変更できません。</li>
+    </ul>
+   </section>
+   <section>
+    <h3>バッティング方法</h3>
+    <ul>
+     <li>画面をドラッグして打撃カーソルを動かし、ボールが届く位置に合わせます。</li>
+     <li>ボールが届く瞬間に指やマウスを離すとスイングします。PCではSpaceキーまたはEnterキーでもスイングできます。</li>
+     <li>タイミングとカーソル位置が、ミート度や打球結果に影響します。</li>
+    </ul>
+   </section>
+   <section>
+    <h3>試合のルール</h3>
+    <ul>
+     <li>CPU戦では3回戦または5回戦を選べます。オンライン対戦もできます。</li>
+     <li>4ボールでフォアボール、3ストライクでアウトになります。ファウルは2ストライクまではストライクに数えます。</li>
+     <li>3アウトで攻守交代します。規定回終了時に同点なら試合ptで勝敗を判定します。</li>
+    </ul>
+   </section>
+   <section>
+    <h3>打撃練習</h3>
+    <ul>
+     <li>球種やコースを選んで、打撃操作を練習できます。</li>
+     <li>打撃結果の詳細は、カーソル横の表示エリアに表示されます。見逃しでは直前の詳細表示を維持します。</li>
+    </ul>
+   </section>
+  </div>
  </section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
