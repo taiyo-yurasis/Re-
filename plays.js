@@ -243,6 +243,10 @@ function resultFly(ms,info){
   return;
 }
 function result(k,ms,info){
+ if(typeof Snd!=='undefined'){
+  if(k==='ball'||k==='look'||k==='miss')Snd.mitt();
+  else if(k==='foul'||k==='gr'||k==='fly'||k==='1B'||k==='2B'||k==='3B'||k==='HR')Snd.hit(info&&info.tier);
+ }
  if(G.prac)return pracResult(k,ms,info);
  if(k==='ball')return resultBall(ms,info);
  if(k==='look'||k==='miss')return resultStrike(k,ms,info);

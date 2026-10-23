@@ -76,3 +76,21 @@ test('practice detail updates on a swing but is preserved on a take', async ({ p
   await expect(detail).toHaveText(previous);
 });
 
+
+test('sound toggle switches and persists, and Snd plays without page errors', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
+  await page.goto('/');
+  await page.getByRole('button', { name: '3回戦で遊ぶ' }).click();
+  const toggle = page.locator('#snd-toggle');
+  await expect(toggle).toHaveText('音: ON');
+  await toggle.click();
+  await expect(toggle).toHaveText('音: OFF');
+  expect(await page.evaluate(() => localStorage.getItem('yakyu-stadium-sound-enabled'))).toBe('0');
+  expect(await page.evaluate(() => Snd.isEnabled())).toBe(false);
+  await toggle.click();
+  await expect(toggle).toHaveText('音: ON');
+  await page.evaluate(() => { Snd.swing(); Snd.mitt(); Snd.hit('solid'); Snd.hit('weak'); });
+  expect(pageErrors).toEqual([]);
+});
