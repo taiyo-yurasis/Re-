@@ -60,6 +60,13 @@
    <button class="bt sm on" data-cpu-first="1">先攻</button>
    <button class="bt sm" data-cpu-first="0">後攻</button>
   </div>
+  <div class="setting-row" id="cpu-difficulty-row">
+   <span>CPU強度:</span>
+   <button class="bt sm" data-cpu-level="1">初心者</button>
+   <button class="bt sm on" data-cpu-level="2">標準</button>
+   <button class="bt sm" data-cpu-level="3">強い</button>
+   <button class="bt sm" data-cpu-level="4">最強</button>
+  </div>
  </div>
 
  <div id="prac-box" class="setting-box" style="display:none">
@@ -74,7 +81,7 @@
  <div class="row" id="room-row"><input id="code" placeholder="合言葉(英数6桁)"><button class="bt" id="jn">部屋に入る</button><button class="bt" id="cancel-room" style="display:none">キャンセル</button></div>
  <div class="patch-footer">
   <button class="bt sm patch-trigger" id="patch-notes-button" type="button">パッチノート</button>
-  <div class="version" id="current-version">Ver.1.0.13</div>
+  <div class="version" id="current-version">Ver.1.0.14</div>
  </div>
 </div></div>
 <div id="patch-ov" aria-hidden="true">
@@ -91,6 +98,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="cpu-difficulty.js"></script>
 <script src="core.js"></script>
 <script src="hud.js"></script>
 <script src="runners.js"></script>
