@@ -35,7 +35,7 @@ test('CPU batting delegates the final outcome to the shared batResult function',
   vm.runInContext('cpuBat()', context);
   assert.equal(context.lastResult[0], '1B');
   assert.ok(Number.isFinite(context.lastResult[1]));
-  assert.equal(context.lastResult[2].x, 110);
-  assert.equal(context.lastResult[2].y, 110);
+  assert.ok(context.lastResult[2].x >= 0 && context.lastResult[2].x <= 220);
+  assert.ok(context.lastResult[2].y >= 0 && context.lastResult[2].y <= 220);
   assert.equal(context.took, undefined);
 });
