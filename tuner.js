@@ -39,7 +39,9 @@ function emptyStats(){
 }
 function simulate(mode, seed){
   const {context,setSeed}=makeContext(seed);
-  context.CONFIG.batMode=mode;
+  const CONFIG=vm.runInContext('CONFIG',context);
+  const TY=vm.runInContext('TY',context);
+  CONFIG.batMode=mode;
   const stats=emptyStats(), byType={};
   for(const type of types){
     byType[type]=emptyStats();
@@ -55,7 +57,7 @@ function simulate(mode, seed){
   });
   setSeed(seed ^ 0x13579bdf);
   for(const input of pitches){
-    const p={type:input.type,x:input.x,y:input.y,sg:1,dur:context.TY[input.type].d};
+    const p={type:input.type,x:input.x,y:input.y,sg:1,dur:TY[input.type].d};
     const cx=Math.max(0,Math.min(220,input.x+input.ex));
     const cy=Math.max(0,Math.min(220,input.y+input.ey));
     const r=context.batResult(p,input.ms,cx,cy);
@@ -69,11 +71,11 @@ function simulate(mode, seed){
         target.inPlay++;
         if(r.k==='HR')target.hr++;
         if(['1B','2B','3B','HR'].includes(r.k))target.hit++;
-        if(Number.isFinite(r.launch)&&r.launch>=context.CONFIG.phys.groundAng){
+        if(Number.isFinite(r.launch)&&r.launch>=CONFIG.phys.groundAng){
           target.air++;
           if(r.k==='HR')target.airHR++;
           if(r.k==='fly')target.flyOut++;
-        }else if(Number.isFinite(r.launch)&&r.launch<context.CONFIG.phys.groundAng){
+        }else if(Number.isFinite(r.launch)&&r.launch<CONFIG.phys.groundAng){
           target.ground++;
           if(r.k==='1B')target.groundHit++;
         }

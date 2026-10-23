@@ -22,7 +22,8 @@ function createContext(){
 }
 
 function swing(context, {type='s', x=110, y=110, ms=0, cx=x, cy=y}={}){
-  context.testPitch = {type, x, y, sg:1, dur:context.TY[type].d};
+  const dur = vm.runInContext('TY[' + JSON.stringify(type) + '].d', context);
+  context.testPitch = {type, x, y, sg:1, dur};
   return vm.runInContext('batResult(testPitch, testMs, testX, testY)', Object.assign(context, {
     testMs: ms, testX: cx, testY: cy
   }));
@@ -52,17 +53,17 @@ test('physics outcomes follow the configured distance thresholds', () => {
   vm.runInContext('CONFIG.phys.spdRange=100', context);
   const homeRun = swing(context, {x:110, y:110, ms:0});
   assert.equal(homeRun.k, 'HR');
-  assert.ok(homeRun.dist >= context.CONFIG.phys.hrMin);
+  assert.ok(homeRun.dist >= vm.runInContext('CONFIG.phys.hrMin', context));
 
   vm.runInContext('CONFIG.phys.spdRange=50', context);
   const single = swing(context, {x:110, y:110, ms:0});
   assert.equal(single.k, '1B');
-  assert.ok(single.dist >= context.CONFIG.phys.inField && single.dist < context.CONFIG.phys.hitMax);
+  assert.ok(single.dist >= vm.runInContext('CONFIG.phys.inField', context) && single.dist < vm.runInContext('CONFIG.phys.hitMax', context));
 
   vm.runInContext('CONFIG.phys.spdRange=35', context);
   const shortFly = swing(context, {x:110, y:110, ms:0});
   assert.equal(shortFly.k, 'fly');
-  assert.ok(shortFly.dist < context.CONFIG.phys.inField);
+  assert.ok(shortFly.dist < vm.runInContext('CONFIG.phys.inField', context));
 });
 
 test('table mode remains available and does not return physics-only speed fields', () => {
