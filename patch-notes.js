@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.0.14';
+  const currentVersion = '1.0.15';
   const updates = [
+    {
+      version: '1.0.15',
+      title: 'UIを更新',
+      changes: [
+        'コードの修正をしました。'
+      ]
+    },
     {
       version: '1.0.14',
       title: 'CPU難易度と共通打撃判定を追加',
@@ -150,9 +157,24 @@
   const closeButton = document.getElementById('patch-close');
   const list = document.getElementById('patch-list');
   const versionLabel = document.getElementById('current-version');
+  const badge = document.getElementById('patch-notes-badge');
+  const rulesButton = document.getElementById('rules-button');
+  const rulesOverlay = document.getElementById('rules-ov');
+  const rulesCloseButton = document.getElementById('rules-close');
+  const readVersionKey = 'yakyu-stadium-patch-notes-read-version';
 
   if (!openButton || !overlay || !closeButton || !list || !versionLabel) return;
 
+  function syncBadge() {
+    let readVersion = '';
+    try { readVersion = localStorage.getItem(readVersionKey) || ''; } catch (_) {}
+    if (badge) badge.hidden = readVersion === currentVersion;
+  }
+  function markRead() {
+    try { localStorage.setItem(readVersionKey, currentVersion); } catch (_) {}
+    syncBadge();
+  }
+  syncBadge();
   versionLabel.textContent = 'Ver.' + currentVersion;
 
   updates.forEach((update) => {
@@ -182,6 +204,7 @@
   let previousFocus = null;
 
   function openModal() {
+    markRead();
     previousFocus = document.activeElement;
     overlay.classList.add('open');
     overlay.setAttribute('aria-hidden', 'false');
@@ -202,6 +225,32 @@
     if (event.target === overlay) closeModal();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    if (event.key !== 'Escape') return;
+    if (overlay.classList.contains('open')) closeModal();
+    if (rulesOverlay && rulesOverlay.classList.contains('open')) closeRulesModal();
   });
+
+  let previousRulesFocus = null;
+  function openRulesModal() {
+    if (!rulesOverlay || !rulesCloseButton) return;
+    previousRulesFocus = document.activeElement;
+    rulesOverlay.classList.add('open');
+    rulesOverlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    rulesCloseButton.focus();
+  }
+  function closeRulesModal() {
+    if (!rulesOverlay) return;
+    rulesOverlay.classList.remove('open');
+    rulesOverlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (previousRulesFocus && typeof previousRulesFocus.focus === 'function') previousRulesFocus.focus();
+  }
+  if (rulesButton && rulesOverlay && rulesCloseButton) {
+    rulesButton.addEventListener('click', openRulesModal);
+    rulesCloseButton.addEventListener('click', closeRulesModal);
+    rulesOverlay.addEventListener('click', (event) => {
+      if (event.target === rulesOverlay) closeRulesModal();
+    });
+  }
 })();
