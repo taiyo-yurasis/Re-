@@ -31,7 +31,7 @@ const CPU_DIFFICULTY = {
 /* ---- 固定ゲーム設定(バランス調整はここ) ---- */
 const CONFIG = {
  batMode: 'physics',       // 'physics' = 打球物理モデル / 'table' = 従来の hitTable
- physicsCorrectionScale: 0.5, // 物理モデルでの球種ボーナス・遅れ補正の倍率
+ physicsCorrectionScale: 0.25, // 物理モデルでの球種ボーナス・遅れ補正の倍率
  courseIdealMs: 25,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)
  dirCourseDeg: 28,          // コースによる打球方向の角度(deg)
  meetVertWeight: 0.4,       // ミート距離における上下ズレの重み
