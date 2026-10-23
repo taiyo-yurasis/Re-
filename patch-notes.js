@@ -1,7 +1,15 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.0.15';
+  const currentVersion = '1.1.0';
   const updates = [
+    {
+      version: '1.1.0',
+      title: '打撃システムを物理モデルに刷新',
+      changes: [
+        'ミート度・打球角度・打球速度・飛距離をもとに打球結果を計算する新しい打撃システムを導入しました。',
+        '球種ごとの打撃補正を調整し、カーブとツーシームの強さを見直しました。'
+      ]
+    },
     {
       version: '1.0.15',
       title: 'UIを更新',
