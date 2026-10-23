@@ -97,31 +97,3 @@ document.querySelectorAll('[data-pc]').forEach(b=>b.addEventListener('click',()=
 $('prac-go').addEventListener('click',()=>{$('ov').style.display='none';startPractice()});
 $('prac-reset').addEventListener('click',()=>{if(G.prac){G.prac=pracStats();updateHud()}});
 $('prac-exit').addEventListener('click',()=>location.reload());
-
- if(e.repeat)return;
- const target=e.target;
- if(target instanceof Element&&target.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]'))return;
- if($('ov').style.display!=='none'||$('patch-ov')?.classList.contains('open'))return;
- if(e.code==='Space'||e.key==='Enter'){e.preventDefault();act()}
-});
-document.querySelectorAll('#ov [data-n]').forEach(b=>b.addEventListener('click',()=>{
- $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel);startHalf()}));
-
-let pvpSel=0,ck='';
-document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',()=>{
- pvpSel=+b.dataset.m;
- document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
- $('cpu-order-row').style.display=pvpSel===0?'flex':'none';
- $('prac-box').style.display=pvpSel===3?'flex':'none';$('n-row').style.display=pvpSel===3?'none':'flex';$('room-row').style.display=pvpSel===3?'none':'flex';
-}));
-function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(pitHuman()?'p':'h');if(k===ck)return;ck=k;
- $('pts').style.display=k==='p'?'flex':'none';$('sw').style.display=k==='p'?'':'none';$('hint').style.display=k==='h'?'flex':'none'}
-
-/* ---- 打撃練習 ---- */
-document.querySelectorAll('[data-pt]').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.pt;
- if(pracCfg.types.has(t)){if(pracCfg.types.size>1){pracCfg.types.delete(t);b.classList.remove('on')}}else{pracCfg.types.add(t);b.classList.add('on')}}));
-document.querySelectorAll('[data-pc]').forEach(b=>b.addEventListener('click',()=>{pracCfg.course=b.dataset.pc;
- document.querySelectorAll('[data-pc]').forEach(x=>x.classList.toggle('on',x===b))}));
-$('prac-go').addEventListener('click',()=>{$('ov').style.display='none';startPractice()});
-$('prac-reset').addEventListener('click',()=>{if(G.prac){G.prac=pracStats();updateHud()}});
-$('prac-exit').addEventListener('click',()=>location.reload());
