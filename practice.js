@@ -6,6 +6,7 @@ const pracStats=()=>({n:0,sw:0,msSum:0,miss:0,foul:0,look:0,ball:0,play:0,res:{'
 
 function startPractice(){
  newGame(3,false);G.humanTeam=0;G.top=true;G.prac=pracStats();
+ $('hint').textContent='';
  $('prac-ctl').style.display='flex';ready()}
 
 // 次の球(球種・コース)。ready() から呼ばれる
@@ -33,6 +34,8 @@ function pracResult(k,ms,info){
   if(info&&info.dir){parts.push(`${PR_DL[info.dir]}×${PR_CL[info.course]}`,lift>CONFIG.liftBand?'フライ寄り':lift<-CONFIG.liftBand?'ゴロ寄り':'ライナー')}
  }
  if(k==='ball')S.ball++;else if(k==='look')S.look++;else if(k==='miss')S.miss++;else if(k==='foul')S.foul++;else{S.play++;S.res[k]++}
+ // 見逃し(msがnull/undefined)では直前の打撃詳細を維持する。
+ if(ms!=null){const detail=$('hint');if(detail)detail.textContent=`${PR_RL[k]||k} ｜ ${parts.join(' / ')}`;}
  banner(PR_RL[k]||k);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[k]||k}`);updateHud();later(500,ready)}
 
 function pracHud(){
