@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 const count = Math.max(1000, Number(process.env.SIM_PITCHES) || 30000);
 const seed0 = Number(process.env.SIM_SEED) || 20261023;
+const scaleOverride = process.env.PHYSICS_SCALE === undefined ? null : Number(process.env.PHYSICS_SCALE);
 const types = ['s', 'sl', 'c', 'f', 'sh', 'cu'];
 
 function mulberry32(seed){
@@ -41,19 +42,15 @@ function simulate(mode, seed){
   const {context,setSeed}=makeContext(seed);
   const CONFIG=vm.runInContext('CONFIG',context);
   const TY=vm.runInContext('TY',context);
+  if(scaleOverride !== null && Number.isFinite(scaleOverride)) CONFIG.physicsCorrectionScale=scaleOverride;
   CONFIG.batMode=mode;
   const stats=emptyStats(), byType={};
-  for(const type of types){
-    byType[type]=emptyStats();
-  }
-  // Inputs are generated independently of the result RNG, keeping the same pitches in both modes.
+  for(const type of types) byType[type]=emptyStats();
   const inputRng=mulberry32(seed ^ 0x5f3759df);
   const pitches=Array.from({length:count},(_,i)=>{
     const type=types[i%types.length];
-    return {
-      type, x:44+inputRng()*132, y:44+inputRng()*132,
-      ms:normal(inputRng,60), ex:normal(inputRng,9), ey:normal(inputRng,9)
-    };
+    return {type, x:44+inputRng()*132, y:44+inputRng()*132,
+      ms:normal(inputRng,60), ex:normal(inputRng,9), ey:normal(inputRng,9)};
   });
   setSeed(seed ^ 0x13579bdf);
   for(const input of pitches){
@@ -61,8 +58,7 @@ function simulate(mode, seed){
     const cx=Math.max(0,Math.min(220,input.x+input.ex));
     const cy=Math.max(0,Math.min(220,input.y+input.ey));
     const r=context.batResult(p,input.ms,cx,cy);
-    const s=stats,t=byType[input.type];
-    for(const target of [s,t]){
+    for(const target of [stats,byType[input.type]]){
       target.total++;
       target.results[r.k]=(target.results[r.k]||0)+1;
       if(r.k==='miss')target.miss++;
@@ -99,7 +95,7 @@ function printStats(label,s){
 const physics=simulate('physics',seed0);
 const table=simulate('table',seed0);
 console.log('野球盤 STADIUM 実コード Monte Carlo');
-console.log('各モード '+count.toLocaleString()+' 球、ゾーン一様、タイミング誤差SD=60ms、カーソル誤差SD=9px/軸、球種均等。seed='+seed0);
+console.log('各モード '+count.toLocaleString()+' 球、ゾーン一様、タイミング誤差SD=60ms、カーソル誤差SD=9px/軸、球種均等。seed='+seed0+'、補正倍率='+(scaleOverride===null?'config default':scaleOverride));
 printStats('物理モデル',physics.stats);
 printStats('従来 hitTable 方式',table.stats);
 console.log('\n物理モデル：球種別');
