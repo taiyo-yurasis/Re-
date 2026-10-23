@@ -1,6 +1,7 @@
 /* pitching.js — 投球(狙い・軌道・投げる) */
 function pitchTarget(){const team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x,0,220),y:cl(G.cur.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
 function applyPitchAimError(type,x,y){const j=TY[type].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
+function applyCpuPitchError(x,y,level=2){const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2],a=rnd(0,2*P),r=d.pitchAimError*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
 function breakAt(type,hand,u,py){
  const br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2),shape=CONFIG.pitchShape||{};
  switch(type){

@@ -64,6 +64,11 @@ document.querySelectorAll('[data-cpu-first]').forEach(b=>b.addEventListener('cli
  e.target.classList.add('on');cfgCpuFirst=e.target.dataset.cpuFirst==='1';
 }));
 
+document.querySelectorAll('[data-cpu-level]').forEach(b=>b.addEventListener('click',e=>{
+ document.querySelectorAll('[data-cpu-level]').forEach(x=>x.classList.remove('on'));
+ e.target.classList.add('on');cfgCpuDifficulty=cl(Number(e.target.dataset.cpuLevel)||2,1,4);
+}));
+
 addEventListener('keydown',e=>{
  if(e.repeat)return;
  const target=e.target;
@@ -78,7 +83,7 @@ let pvpSel=0,ck='';
 document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',()=>{
  pvpSel=+b.dataset.m;
  document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
- $('cpu-order-row').style.display=pvpSel===0?'flex':'none';
+ $('cpu-order-row').style.display=pvpSel===0?'flex':'none';$('cpu-difficulty-row').style.display=pvpSel===0?'flex':'none';
  $('prac-box').style.display=pvpSel===3?'flex':'none';$('n-row').style.display=pvpSel===3?'none':'flex';$('room-row').style.display=pvpSel===3?'none':'flex';
 }));
 function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(pitHuman()?'p':'h');if(k===ck)return;ck=k;

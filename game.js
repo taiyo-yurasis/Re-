@@ -2,6 +2,7 @@
 let cfgPitcher = 1;
 let cfgBatter = 'right';
 let cfgCpuFirst = true;
+let cfgCpuDifficulty = 2;
 const pickBatterSide=s=>s==='random'?(Math.random()<0.5?'right':'left'):s;
 function selectNextBatterSide(team=G.top?0:1){G.batterSides[team]=pickBatterSide(G.batterModes[team])}
 
@@ -46,7 +47,7 @@ function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.
    if(G.prac){const pp=pracPitch();return throwP(pp.t,pp.x,pp.y)}
    const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];let x,y;
    if(Math.random()<.62){x=rnd(52,168);y=rnd(52,168)}else{x=rnd(20,200);y=rnd(20,200)}
-   throwP(t,x,y)})}
+   const aim=applyCpuPitchError(x,y,cfgCpuDifficulty);throwP(t,aim.x,aim.y)})}
  else{G.phase='aim';setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
 function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;

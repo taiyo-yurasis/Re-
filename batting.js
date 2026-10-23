@@ -65,11 +65,19 @@ function swing(){
  result(r.k,ms,r);
 }
 
-function cpuBat(){const p=G.pitch,d=dist(p),z=d<=1,rep=p.type===G.last;G.last=p.type;
- let sw=z?(d?.7:.8):(p.type==='f'||p.type==='sh'?.4:.2);if(G.cnt.s==2)sw+=.15;
- if(Math.random()>sw)return take();
+function cpuNormalError(sd){const u=Math.max(1e-9,Math.random()),v=Math.random();return sd*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+// CPUもプレイヤーと同じ batResult() を使い、難易度は操作誤差と見極めで調整する。
+function cpuBat(){
+ const p=G.pitch;if(!p)return;
+ const level=cl(Number(cfgCpuDifficulty)||2,1,4),D=CPU_DIFFICULTY[level]||CPU_DIFFICULTY[2],d=dist(p),rep=p.type===G.last;G.last=p.type;
+ let sw=d===0?D.swingZone:d===1?D.swingEdge:D.swingOutside;
+ if(G.cnt.s===2)sw+=.15;
+ if(Math.random()>=cl(sw,0,.98))return take();
+ const typeFactor=p.type==='c'||p.type==='cu'?1.12:p.type==='f'?1.08:1;
+ const ms=cpuNormalError(D.timingError*typeFactor*(rep?.88:1));
+ const [x,y]=bp(p,1),curX=cl(x+cpuNormalError(D.positionError),0,220),curY=cl(y+cpuNormalError(D.positionError),0,220);
  G.swingT=performance.now();
- const c=.72-(p.type==='c'||p.type==='cu'?.1:p.type==='f'?.14:0)-(d==1?.08:0)-(d>=2?.35:0)+(rep?.12:0);
- if(Math.random()>c)return result('miss', null);
- result(Math.random()<CONFIG.cpuFoulRate?'foul':rollW(CONFIG.cpuHitTable), null);
+ const r=batResult(p,ms,curX,curY);
+ result(r.k,ms,r);
 }
