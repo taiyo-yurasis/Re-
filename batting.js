@@ -28,10 +28,10 @@ function judgeRef(p,ms,curX,curY){
 }
 const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak';
 
-// スイング判定(CPUローカル/オンライン共通)。戻り値 {k:結果, meet, tier, angle}
+// 従来方式(CPUローカル/オンライン共通)。hitTable による結果抽選
 // p:投球 ms:ジャストとのズレ(負=早い) curX,curY:カーソル位置
 // 距離・高さは投球の着地点(ボールが届く位置)とカーソルで決める。ボールが途中のどこにいるかは関係ない(早い・遅いはタイミング点だけに効く)
-function batResult(p,ms,curX,curY){
+function batResultTable(p,ms,curX,curY){
  const C=CONFIG,[lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
  if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
@@ -49,6 +49,81 @@ function batResult(p,ms,curX,curY){
  const shift=(dir==='pull'&&course==='in')||(dir==='oppo'&&course==='out')?C.courseShift:(dir==='pull'&&course==='out')||(dir==='oppo'&&course==='in')?-C.courseShift:0;
  const TIERS=['weak','normal','solid'],tier2=TIERS[Math.max(0,Math.min(2,TIERS.indexOf(tier)+shift))];
  return {k:rollW(C.hitTable[tier2][traj]),meet,tier:tier2,tier0:tier,angle,dir,course};
+}
+
+
+/*
+ * 物理モデル:
+ * 1) コースに応じた理想タイミングとミート度
+ * 2) 打球方向・打球角度・打球速度
+ * 3) 推定飛距離から打球結果を判定
+ */
+function batResultPhysics(p,ms,curX,curY){
+ const C=CONFIG,J=C.judge||{},F=C.phys||{};
+ const [lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
+ // 空振り条件は従来方式を維持する。
+ if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
+ if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
+
+ const sgn=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='left'?-1:1;
+ const off=(lx-110)*sgn;
+ const courseN=cl(off/66,-1,1);
+ const err=ms-C.courseIdealMs*courseN;
+ const tq=clamp01(1-Math.abs(err)/C.timingWindowMs);
+ const dx=curX-judge.rx,dy=curY-judge.ry;
+ const dq=clamp01(1-Math.hypot(dx,dy*C.meetVertWeight)/C.cursorSize);
+ const noise=rnd(-1,1)*C.meetNoiseX*Math.min(1,Math.abs(dx)/C.cursorSize);
+ const baseMeet=clamp01(Math.pow(tq,C.meetTimingPow)*Math.pow(dq,C.meetDistPow)+noise);
+
+ // 球種固有の補正はミート段階で一度だけ適用する。
+ const bonusOn=!!(J.bonus&&J.bonus[p.type]);
+ const correctionScale=Number.isFinite(C.physicsCorrectionScale)?C.physicsCorrectionScale:1;
+ const correctedMeet=bonusOn
+  ?Math.min(1,baseMeet*(1+judge.bonusRate*correctionScale))
+    *(1-judge.latePenalty*correctionScale*judge.lateRate)
+  :baseMeet;
+ const meet=clamp01(correctedMeet);
+ const tier=tierOf(meet);
+
+ // 打球方向。角度は画面右が正。courseShift は物理モデルでは適用しない。
+ const angle=sgn*(courseN*C.dirCourseDeg+err*C.dirTimingGain)
+  +rnd(-1,1)*C.dirNoiseDeg*(1-meet);
+ const pl=-sgn*angle;
+ const dir=pl>C.centerDeg?'pull':pl<-C.centerDeg?'oppo':'center';
+ const course=off<-C.courseThird?'in':off>C.courseThird?'out':'mid';
+ if(Math.abs(angle)>C.foulAngleDeg)return {k:'foul',meet,tier,tier0:tier,angle,dir,course};
+
+ // ボールより下側を振るほど打球角度が上がる。
+ const lift=(curY-judge.ry)/C.cursorSize;
+ const dz=Math.sign(lift)*Math.max(0,Math.abs(lift)-F.dead);
+ const launch=F.baseAng+F.angK*dz+rnd(-1,1)*(1-meet)*F.nAng;
+ const speed=Math.max(30,
+  (F.spdMin+F.spdRange*meet)*(1-F.spdLoss*Math.pow(Math.abs(lift),1.5))
+  +rnd(-1,1)*(1-meet)*F.nSpd);
+
+ let k,distMeters=0;
+ if(launch<F.groundAng){
+  const hitChance=F.gHitMax*clamp01((speed-F.gHitFrom)/(F.gHitTo-F.gHitFrom));
+  k=Math.random()<hitChance?'1B':'gr';
+ }else{
+  const angleForDistance=Math.min(launch,89);
+  const velocity=speed/3.6;
+  distMeters=velocity*velocity*Math.sin(2*angleForDistance*Math.PI/180)/9.8*F.distK;
+  if(distMeters<F.inField)k='fly';
+  else if(distMeters>=F.hrMin)k='HR';
+  else if(distMeters>=F.hitMax){
+   const tripleAt=F.hitMax+(F.hrMin-F.hitMax)*F.tripleRatio;
+   k=launch<F.linerAng&&distMeters>=tripleAt?'3B':'2B';
+  }else k=launch<F.linerAng?'1B':'fly';
+ }
+ return {k,meet,tier,tier0:tier,angle,dir,course,launch,speed,dist:distMeters};
+}
+
+// CPU・オンライン・練習モード共通の入口。旧方式も設定で利用できる。
+function batResult(p,ms,curX,curY){
+ return CONFIG.batMode==='table'
+  ?batResultTable(p,ms,curX,curY)
+  :batResultPhysics(p,ms,curX,curY);
 }
 
 function swing(){
