@@ -33,6 +33,7 @@ function bp(p,t){
 }
 
 function throwP(t,x,y,applyAimError=false){
+ if(typeof Snd!=='undefined')Snd.throw();
  t=typeof t==='string'&&Object.hasOwn(TY,t)?t:'s';
  const pos=v=>{const n=Number(v);return Number.isFinite(n)?cl(n,0,220):110};x=pos(x);y=pos(y);
  if(applyAimError){const actual=applyPitchAimError(t,x,y);x=actual.x;y=actual.y}

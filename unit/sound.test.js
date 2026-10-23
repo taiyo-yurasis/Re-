@@ -39,6 +39,7 @@ function createContext({ withAudio = false } = {}) {
 
 test('sound API exists and is enabled by default', () => {
   const context = createContext();
+  assert.equal(typeof context.Snd.throw, 'function');
   assert.equal(typeof context.Snd.swing, 'function');
   assert.equal(typeof context.Snd.mitt, 'function');
   assert.equal(typeof context.Snd.hit, 'function');
@@ -47,6 +48,7 @@ test('sound API exists and is enabled by default', () => {
 
 test('sound functions are safe no-ops without an AudioContext', () => {
   const context = createContext();
+  context.Snd.throw();
   context.Snd.swing();
   context.Snd.mitt();
   context.Snd.hit('solid');
@@ -65,13 +67,14 @@ test('mute preference persists and disables playback', () => {
 
 test('sound functions drive an AudioContext when available', () => {
   const context = createContext({ withAudio: true });
+  context.Snd.throw();
   context.Snd.swing();
   context.Snd.mitt();
   context.Snd.hit('solid');
   context.Snd.hit('weak');
-  // whoosh=1 source, mitt=2 (noise+osc), hit=3 each (2 noise+osc)
-  assert.equal(context.__started, 9);
+  // throw=2 bursts, swing=2 bursts, mitt=2 bursts+1 osc, hit=3 bursts+2 osc each
+  assert.equal(context.__started, 17);
   context.Snd.setEnabled(false);
   context.Snd.swing();
-  assert.equal(context.__started, 9);
+  assert.equal(context.__started, 17);
 });

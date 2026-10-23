@@ -91,6 +91,6 @@ test('sound toggle switches and persists, and Snd plays without page errors', as
   expect(await page.evaluate(() => Snd.isEnabled())).toBe(false);
   await toggle.click();
   await expect(toggle).toHaveText('音: ON');
-  await page.evaluate(() => { Snd.swing(); Snd.mitt(); Snd.hit('solid'); Snd.hit('weak'); });
+  await page.evaluate(() => { Snd.throw(); Snd.swing(); Snd.mitt(); Snd.hit('solid'); Snd.hit('weak'); });
   expect(pageErrors).toEqual([]);
 });
