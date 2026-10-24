@@ -1,7 +1,15 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.2.2';
+  const currentVersion = '1.2.3';
   const updates = [
+    {
+      version: '1.2.3',
+      title: '細かい不具合の修正',
+      changes: [
+        '四球のときに、前の投球の詳細メッセージが残ってしまう問題を修正しました。',
+        'オンライン対戦の通信データ検証を厳しくしました（異常なデータを受け取りにくくなります）。'
+      ]
+    },
     {
       version: '1.2.2',
       title: '精査で見つけた不具合の修正',
