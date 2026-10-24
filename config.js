@@ -36,13 +36,19 @@ const CONFIG = {
  dirCourseDeg: 28,          // コースによる打球方向の角度(deg)
  meetVertWeight: 0.4,       // ミート距離における上下ズレの重み
  meetNoiseX: 0.08,          // 横ズレに応じたミート度のランダム幅
+ /* 打球の数字は MLB の実測に較正済み(Ver.1.2.0): 平均打球速度 約142km/h、
+    HR下限=フェンス 110m、HR/FB 約11% を目安に調整。
+    spdLossLiftScale: 速度低下の計算でも上下ズレを圧縮する倍率(上下ズレは角度担当という設計のため)
+    dragV(基準速度 dragVRef 超過分)・dragBase/dragK: 空気抵抗の代用。速い打球ほど・高い打球ほど伸びない
+    wtOut: 深いフライ(長打ゾーン・角度25°以上)がフェンス手前で捕球される確率 */
  phys: {
-  baseAng: 14, angK: 55, dead: 0.15, nAng: 8,
-  spdMin: 75, spdRange: 100, spdLoss: 0.6, nSpd: 6,
-  distK: 0.8,
+  baseAng: 13, angK: 58, dead: 0.05, nAng: 8,
+  spdMin: 105, spdRange: 95, spdLoss: 0.6, spdLossLiftScale: 0.55, nSpd: 6,
+  distK: 0.9, dragV: 0.028, dragVRef: 33, dragBase: 38, dragK: 0.06,
   groundAng: 10, linerAng: 25,
-  gHitFrom: 30, gHitTo: 130, gHitMax: 0.4,
-  inField: 38, hitMax: 55, hrMin: 75,
+  gHitFrom: 90, gHitTo: 175, gHitMax: 0.4,
+  inField: 56, hitMax: 80, hrMin: 110,
+  wtOut: 0.65,
   tripleRatio: 0.7
  },
  cursorSize: 16,        // ミート判定: カーソルとボールの許容距離(px)
@@ -57,14 +63,14 @@ const CONFIG = {
  run2BFirstHome: 0.4,   // 二塁打: 一塁走者が生還する確率(残りは三塁止まり。二・三塁走者は必ず生還)
  runGrThirdHome: 0.6,   // ゴロアウト: 三塁走者が生還する確率(残りは三塁に残る)
  runGrSecondThird: 0.65,// ゴロアウト: 二塁走者が三塁へ進む確率(三塁走者が残ると進めない)
- sacFlyDepthMid: 190,   // フライの飛距離がこれ以上で「中間」、sacFlyDepthDeep以上で「深い」
- sacFlyDepthDeep: 215,
+ sacFlyDepthMid: 128,   // フライの飛距離がこれ以上で「中間」、sacFlyDepthDeep以上で「深い」
+ sacFlyDepthDeep: 145,
  sacFlyShallowRate: 0.05, // 犠牲フライ(三塁走者生還)になる確率: 浅い/中間/深い
  sacFlyMidRate: 0.3,
  sacFlyDeepRate: 0.7,
- tagUpDepth: 240,       // これ以上深いフライで、二塁走者がタッチアップして三塁へ進める(三塁が空いているとき)
+ tagUpDepth: 162,       // これ以上深いフライで、二塁走者がタッチアップして三塁へ進める(三塁が空いているとき)
  tagUpSecondRate: 0.25,
- flyPxPerM: 4.6,        // 物理モデルの飛距離(m)をフライ処理の距離(px)に換算する係数(HR下限75mが描画345px相当)
+ flyPxPerM: 3.1,        // 物理モデルの飛距離(m)をフライ処理の距離(px)に換算する係数(HR下限110mが描画345px相当)
 
  /* ---- 空振りの境界 ---- */
  timingWindowMs: 220,   // ジャストから±この範囲を超えると空振り

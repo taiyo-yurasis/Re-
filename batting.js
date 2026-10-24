@@ -109,7 +109,7 @@ function batResultPhysics(p,ms,curX,curY){
  const dz=Math.sign(lift)*Math.max(0,Math.abs(lift)-F.dead);
  const launch=F.baseAng+F.angK*dz+rnd(-1,1)*(1-meet)*F.nAng;
  const speed=Math.max(30,
-  (F.spdMin+F.spdRange*meet)*(1-F.spdLoss*Math.pow(Math.abs(lift),1.5))
+  (F.spdMin+F.spdRange*meet)*(1-F.spdLoss*Math.pow(Math.abs(lift*F.spdLossLiftScale),1.5))
   +rnd(-1,1)*(1-meet)*F.nSpd);
 
  let k,distMeters=null; // ゴロは飛距離を計算しない(推定飛距離なし=null)
@@ -119,12 +119,15 @@ function batResultPhysics(p,ms,curX,curY){
  }else{
   const angleForDistance=Math.min(launch,89);
   const velocity=speed/3.6;
-  distMeters=velocity*velocity*Math.sin(2*angleForDistance*Math.PI/180)/9.8*F.distK;
+  distMeters=velocity*velocity*Math.sin(2*angleForDistance*Math.PI/180)/9.8*F.distK
+   *Math.exp(-F.dragV*Math.max(0,velocity-F.dragVRef))
+   *Math.exp(-F.dragK*Math.max(0,angleForDistance-F.dragBase));
   if(distMeters<F.inField)k='fly';
   else if(distMeters>=F.hrMin)k='HR';
   else if(distMeters>=F.hitMax){
    const tripleAt=F.hitMax+(F.hrMin-F.hitMax)*F.tripleRatio;
-   k=launch<F.linerAng&&distMeters>=tripleAt?'3B':'2B';
+   k=launch>=F.linerAng&&Math.random()<F.wtOut?'fly'
+    :launch<F.linerAng&&distMeters>=tripleAt?'3B':'2B';
   }else k=launch<F.linerAng?'1B':'fly';
  }
  return {k,meet,tier,tier0:tier,angle,dir,course,launch,speed,dist:distMeters};

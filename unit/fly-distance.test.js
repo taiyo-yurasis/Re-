@@ -24,16 +24,16 @@ function createContext(random = () => 0.5) {
 
 test('flyDistPx converts physics distance (m) to the fly-handling scale (px)', () => {
   const context = createContext();
-  // 4.6px/m: the mid/deep sac-fly thresholds (190/215px) sit between inField (38m) and hitMax (55m)
-  assert.equal(context.flyDistPx({ dist: 38 }), 175);
-  assert.equal(context.flyDistPx({ dist: 50 }), 230);
-  assert.equal(context.flyDistPx({ dist: 55 }), 253);
+  // 3.1px/m: the mid/deep sac-fly thresholds (128/145px) sit between inField (56m) and hitMax (80m)
+  assert.equal(context.flyDistPx({ dist: 38 }), 118);
+  assert.equal(context.flyDistPx({ dist: 50 }), 155);
+  assert.equal(context.flyDistPx({ dist: 56 }), 174);
 });
 
 test('flyDistPx clamps converted distances to the drawable range', () => {
   const context = createContext();
-  assert.equal(context.flyDistPx({ dist: 10 }), 90);
-  assert.equal(context.flyDistPx({ dist: 100 }), 260);
+  assert.equal(context.flyDistPx({ dist: 10 }), 60);
+  assert.equal(context.flyDistPx({ dist: 120 }), 335);
 });
 
 test('flyDistPx stays monotonic so deeper batted balls fly farther on screen', () => {

@@ -214,7 +214,7 @@ function resultGround(ms,info){
 // フライの飛距離(px)。物理モデルは飛距離(m)を返すので、描画と犠飛判定の尺度(px)に換算する。
 // 飛距離の情報がない場合(table方式など)は従来どおりランダム。
 function flyDistPx(info){
- if(info&&Number.isFinite(info.dist))return cl(Math.round(info.dist*CONFIG.flyPxPerM),90,260);
+ if(info&&Number.isFinite(info.dist))return cl(Math.round(info.dist*CONFIG.flyPxPerM),60,335);
  return rnd(160,270);
 }
 
