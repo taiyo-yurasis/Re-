@@ -49,25 +49,19 @@ $('tg2').addEventListener('click',()=>{
  $('p_group2').style.display='flex';$('p_group1').style.display='none';
 });
 
-document.querySelectorAll('[data-ph]').forEach(b=>b.addEventListener('click',e=>{
- document.querySelectorAll('[data-ph]').forEach(x=>x.classList.remove('on'));
- e.target.classList.add('on');
- cfgPitcher = +e.target.dataset.ph;
-}));
-document.querySelectorAll('[data-bs]').forEach(b=>b.addEventListener('click',e=>{
- document.querySelectorAll('[data-bs]').forEach(x=>x.classList.remove('on'));
- e.target.classList.add('on');
- cfgBatter = e.target.dataset.bs;
-}));
-document.querySelectorAll('[data-cpu-first]').forEach(b=>b.addEventListener('click',e=>{
- document.querySelectorAll('[data-cpu-first]').forEach(x=>x.classList.remove('on'));
- e.target.classList.add('on');cfgCpuFirst=e.target.dataset.cpuFirst==='1';
-}));
-
-document.querySelectorAll('[data-cpu-level]').forEach(b=>b.addEventListener('click',e=>{
- document.querySelectorAll('[data-cpu-level]').forEach(x=>x.classList.remove('on'));
- e.target.classList.add('on');cfgCpuDifficulty=cl(Number(e.target.dataset.cpuLevel)||2,1,4);
-}));
+/* 設定ボタンは CPU戦/オンライン の両画面にあるので、同じ値のボタンをまとめてハイライトする */
+function bindCfg(attr,apply){
+ document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.addEventListener('click',e=>{
+  const v=e.target.dataset[attr.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())];
+  document.querySelectorAll(`[data-${attr}]`).forEach(x=>x.classList.toggle('on',x.dataset[attr.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]===v));
+  apply(v);
+ }));
+}
+bindCfg('ph',v=>{cfgPitcher=+v});
+bindCfg('bs',v=>{cfgBatter=v});
+bindCfg('cpu-first',v=>{cfgCpuFirst=v==='1'});
+bindCfg('cpu-level',v=>{cfgCpuDifficulty=cl(Number(v)||2,1,4)});
+bindCfg('tb',v=>{cfgTiebreak=v});
 
 addEventListener('keydown',e=>{
  if(e.repeat)return;
@@ -80,12 +74,19 @@ document.querySelectorAll('#ov [data-n]').forEach(b=>b.addEventListener('click',
  $('ov').style.display='none';if(pvpSel===2)return hostRoom(+b.dataset.n);newGame(+b.dataset.n,pvpSel);startHalf()}));
 
 let pvpSel=0,ck='';
+/* ホームはモード選択だけ。各モードの設定は専用画面に分ける */
+function showMenu(box){
+ $('home-box').style.display=box==='home'?'block':'none';
+ $('setup-cpu').style.display=box==='cpu'?'flex':'none';
+ $('setup-online').style.display=box==='online'?'flex':'none';
+ $('prac-box').style.display=box==='prac'?'flex':'none';
+}
 document.querySelectorAll('#ov [data-m]').forEach(b=>b.addEventListener('click',()=>{
  pvpSel=+b.dataset.m;
  document.querySelectorAll('#ov [data-m]').forEach(x=>x.classList.toggle('on',x===b));
- $('cpu-order-row').style.display=pvpSel===0?'flex':'none';$('cpu-difficulty-row').style.display=pvpSel===0?'flex':'none';
- $('prac-box').style.display=pvpSel===3?'flex':'none';$('n-row').style.display=pvpSel===3?'none':'flex';$('room-row').style.display=pvpSel===3?'none':'flex';
+ showMenu(pvpSel===0?'cpu':pvpSel===2?'online':'prac');
 }));
+document.querySelectorAll('#ov [data-back]').forEach(b=>b.addEventListener('click',()=>showMenu('home')));
 function ctl(){const k=G.net?(G.phase==='aim'&&canPit()?'p':'h'):G.pvp?(G.phase==='aim'?'p':'h'):(pitHuman()?'p':'h');if(k===ck)return;ck=k;
  $('pts').style.display=k==='p'?'flex':'none';$('sw').style.display=k==='p'?'':'none';$('hint').style.display=k==='h'?'flex':'none'}
 

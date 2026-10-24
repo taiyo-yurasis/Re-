@@ -15,6 +15,7 @@ test('CPU game starts and accepts a batting input without page errors', async ({
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
   await page.goto('/');
+  await page.getByRole('button', { name: 'CPU戦' }).click();
   await page.getByRole('button', { name: '3回戦で遊ぶ' }).click();
 
   try {
