@@ -3,6 +3,8 @@ let cfgPitcher = 1;
 let cfgBatter = 'right';
 let cfgCpuFirst = true;
 let cfgCpuDifficulty = 2;
+let cfgTiebreak = 'off'; // 'off' | 'one' = 延長1イニング | 'full' = 決着まで
+const tiebreakOf=g=>(g&&typeof g.tb==='string')?g.tb:cfgTiebreak;
 const pickBatterSide=s=>s==='random'?(Math.random()<0.5?'right':'left'):s;
 function selectNextBatterSide(team=G.top?0:1){G.batterSides[team]=pickBatterSide(G.batterModes[team])}
 
@@ -32,6 +34,7 @@ function newGame(N,pvp,humanTeam=null,teamCfg=null){
   last:null,
   swingT:-1e9,
   walkoff:false,
+  tb:cfgTiebreak,
   cur:{x:110,y:110},
   pitcherHands: [cfgs[0].ph, cfgs[1].ph],
   batterModes: [cfgs[0].bs, cfgs[1].bs],
@@ -40,7 +43,9 @@ function newGame(N,pvp,humanTeam=null,teamCfg=null){
 }
 
 function startHalf(){selectNextBatterSide();G.outs=0;G.bases=[0,0,0,0];G.cnt={b:0,s:0};G.runs[G.top?0:1][G.inn-1]=0;G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='idle';
- banner(`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
+ const tbHalf=tiebreakOf(G)!=='off'&&G.inn>G.N;
+ if(tbHalf)G.bases=[0,0,1,0]; // タイブレーク(MLB式): ノーアウト二塁から開始
+ banner(tbHalf?`タイブレーク! ${G.inn}回${G.top?'表':'裏'}`:`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
 function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
  if(!G.net&&!pitHuman()){setMsg('ボールが届く位置にカーソルを置いて、届く瞬間に離してスイング!');
   later(rnd(700,1300),()=>{
@@ -57,7 +62,11 @@ function take(){result(dist(G.pitch)<=1?'look':'ball')}
 
 function endHalf(){
  const a=tot(0), b=tot(1);
- const ed = G.top ? (G.inn >= G.N && b > a) : G.inn >= G.N;
+ // タイブレーク: 規定回を同点で終えたら延長へ。'one' は1イニングだけ、'full' は決着まで。
+ // 延長を使い切っても同点なら従来どおり試合ptで勝敗を決める(over() 側)
+ const tb=tiebreakOf(G);
+ const extraLeft = tb!=='off' && a===b && (tb==='full' || G.inn<=G.N);
+ const ed = G.top ? (G.inn >= G.N && b > a) : (G.inn >= G.N && !extraLeft);
 
  banner(ed?'ゲームセット':'チェンジ');
  later(ed?1800:1300,()=>{
@@ -73,5 +82,5 @@ function over(){G.over=true;G.phase='over';const a=tot(0),b=tot(1),tied=a===b;
  $('ovt').textContent=G.pvp?(winner===0?'🎉 ビジターの勝ち!':'🎉 ホームの勝ち!'):(winner===G.humanTeam?'🎉 勝利!':(G.humanTeam===0&&G.walkoff?'😢 サヨナラ負け…':'😢 敗北…'));
  const scoreText=G.pvp?`ビジター ${a} - ${b} ホーム`:`あなた ${tot(G.humanTeam)} - ${tot(1-G.humanTeam)} CPU`;
  const ptsText=tied?`試合pt: 先攻 ${G.pts[0]} - ${G.pts[1]} 後攻`:'';
- $('ovs').textContent=scoreText+(ptsText?' / '+ptsText:'');$('ov').style.display='flex';
+ $('ovs').textContent=scoreText+(ptsText?' / '+ptsText:'');$('ov').style.display='flex';if(typeof showMenu==='function')showMenu('home');
 }
