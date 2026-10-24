@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.1.1';
+  const currentVersion = '1.1.2';
   const updates = [
+    {
+      version: '1.1.2',
+      title: 'フライの飛距離を打球計算と連動',
+      changes: [
+        'フライアウトの飛距離が打球の物理計算と連動するようになり、浅いフライで不自然に犠牲フライが発生することが減りました。'
+      ]
+    },
     {
       version: '1.1.1',
       title: '守備の不具合を修正',
