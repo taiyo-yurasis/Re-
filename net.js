@@ -42,7 +42,7 @@ const send=(t,d)=>{if(RM)RM.emit(t,d).catch(()=>{})};
 const canBat=()=>G.net?(G.top?0:1)===G.me:batHuman(),canPit=()=>G.net?(G.top?1:0)===G.me:pitHuman();
 function snap(){
  const n=performance.now(),p=G.pitch,f=G.fl;
- return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves}}
+ return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves}}
 }
 let lastSync=0;const sync=()=>{const n=performance.now();if(G.net==='host'&&G.gid&&n-lastSync>110){lastSync=n;send('snap',snap())}};
 setInterval(sync,200);
@@ -54,11 +54,11 @@ function validSnap(s){
  const validMotion=m=>!!m&&typeof m==='object'&&
   (m.id==null||Number.isFinite(m.id))&&age(m.age)&&(m.dur==null||numRange(m.dur,0.001,3600000));
  if(!s||typeof s!=='object'||!Number.isFinite(s.gid)||!intRange(s.seq,0,Number.MAX_SAFE_INTEGER)||
-  !intRange(s.hostTeam,0,1)||!intRange(s.inn,1,20)||typeof s.top!=='boolean'||
+  !intRange(s.hostTeam,0,1)||!intRange(s.inn,1,99)||typeof s.top!=='boolean'||
   !intRange(s.N,1,20)||!intRange(s.outs,0,3)||!s.cnt||
   !intRange(s.cnt.b,0,3)||!intRange(s.cnt.s,0,2))return false;
  if(!Array.isArray(s.bases)||s.bases.length!==4||s.bases.some(v=>v!==0&&v!==1))return false;
- if(!Array.isArray(s.runs)||s.runs.length!==2||s.runs.some(a=>!Array.isArray(a)||a.length>20||a.some(v=>v!=null&&!intRange(v,0,999))))return false;
+ if(!Array.isArray(s.runs)||s.runs.length!==2||s.runs.some(a=>!Array.isArray(a)||a.length>99||a.some(v=>v!=null&&!intRange(v,0,999))))return false;
  if(!Array.isArray(s.hits)||s.hits.length!==2||s.hits.some(v=>!intRange(v,0,999)))return false;
  if(s.pts!=null&&(!Array.isArray(s.pts)||s.pts.length!==2||s.pts.some(v=>!intRange(v,0,Number.MAX_SAFE_INTEGER))))return false;
  if(!['idle','ready','aim','sent','pitch','busy','over'].includes(s.ph))return false;
@@ -77,6 +77,7 @@ function validSnap(s){
   (s.f.kind!=null&&typeof s.f.kind!=='string')||(s.f.out!=null&&typeof s.f.out!=='boolean')||
   (s.f.wall!=null&&typeof s.f.wall!=='boolean')||(s.f.diving!=null&&typeof s.f.diving!=='boolean')||
   (s.f.fi!=null&&!intRange(s.f.fi,0,FD.length-1))||(s.f.ri!=null&&!intRange(s.f.ri,0,FD.length-1))||
+  (s.f.isHit!=null&&typeof s.f.isHit!=='boolean')||
   (s.f.h!=null&&!Number.isFinite(s.f.h))))return false;
  if(s.mv!=null&&(!validMotion(s.mv)||!Array.isArray(s.mv.moves)||!Array.isArray(s.mv.stay)||
   s.mv.stay.some(v=>!intRange(v,0,3))||s.mv.moves.some(m=>!m||typeof m!=='object'||

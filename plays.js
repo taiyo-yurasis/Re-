@@ -89,14 +89,13 @@ function safeAtFirst(kind,to,ms,isHit,info){
   fin(800)},1);
 }
 
-// 元からいた走者を確率で進塁させる(打者は1B/2Bのときだけ bat=true で加える)。kind: '1B' | '2B' | 'gr'
+// 元からいた走者を確率で進塁させる(打者は1B/2Bのときだけ bat=true で加える)。kind: '1B' | '2B'
 function advRand(kind,bat){
  const C=CONFIG,targets={};
  for(let b=1;b<=3;b++){
   if(!G.bases[b])continue;
   if(kind==='1B')targets[b]=b===3?4:b===2?(Math.random()<C.run1BSecondHome?4:3):(Math.random()<C.run1BFirstThird?3:2);
-  else if(kind==='2B')targets[b]=b>=2?4:(Math.random()<C.run2BFirstHome?4:3);
-  else targets[b]=b===3?(Math.random()<C.runGrThirdHome?4:3):b===2?(Math.random()<C.runGrSecondThird?3:2):2;
+  else targets[b]=b>=2?4:(Math.random()<C.run2BFirstHome?4:3);
  }
  const result=settle(targets,bat?(kind==='2B'?2:1):null);
  applyRunnerResult(result);
