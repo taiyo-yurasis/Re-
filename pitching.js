@@ -32,6 +32,10 @@ function bp(p,t){
  return [S.x+(p.x-S.x)*u+now.x-end.x*u,S.y+(p.y-S.y)*u+now.y-end.y*u];
 }
 
+// 投球の到達時間をランダムにブレさせるのはCPU投手だけ。人間の投球はオンラインでも固定
+// (ホスト側で相手の投球を処理するときも、相手は人間なのでブレさせない)。
+const pitCpu=()=>!G.net&&!G.pvp&&(G.top?1:0)!==G.humanTeam;
+
 function throwP(t,x,y,applyAimError=false){
  t=typeof t==='string'&&Object.hasOwn(TY,t)?t:'s';
  const pos=v=>{const n=Number(v);return Number.isFinite(n)?cl(n,0,220):110};x=pos(x);y=pos(y);
@@ -45,7 +49,7 @@ function throwP(t,x,y,applyAimError=false){
   x,
   y,
   t0:performance.now(),
-  dur:TY[t].d*(pitHuman()?1:rnd(.9,1.1)),
+  dur:TY[t].d*(pitCpu()?rnd(.9,1.1):1),
   sg: sgDir,
   t:0
  };

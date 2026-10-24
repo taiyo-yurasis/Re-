@@ -58,16 +58,27 @@ function batResultTable(p,ms,curX,curY){
  * 2) 打球方向・打球角度・打球速度
  * 3) 推定飛距離から打球結果を判定
  */
+// コースの内外(-1=内角 〜 +1=外角)。着地点と打者側から決まる、タイミング評価の共通基準。
+function courseNOf(p){
+ const [lx]=bp(p,1),sgn=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='left'?-1:1;
+ return cl(((lx-110)*sgn)/66,-1,1);
+}
+// 実効タイミングズレ(ms): コース別の理想タイミングを差し引いた値。
+// 判定だけでなく表示(練習・詳細メッセージ)やCPU打者もこの基準に揃える。table方式では生のmsのまま。
+function effMs(p,ms){
+ return CONFIG.batMode==='physics'&&p&&Number.isFinite(ms)?ms-CONFIG.courseIdealMs*courseNOf(p):ms;
+}
+
 function batResultPhysics(p,ms,curX,curY){
  const C=CONFIG,J=C.judge||{},F=C.phys||{};
- const [lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
+ const judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
  // 空振り条件は従来方式を維持する。
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};
  if(d>=2&&Math.random()<C.farZoneMissRate)return {k:'miss'};
 
  const sgn=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='left'?-1:1;
- const off=(lx-110)*sgn;
- const courseN=cl(off/66,-1,1);
+ const [lx]=bp(p,1),off=(lx-110)*sgn;
+ const courseN=courseNOf(p);
  const err=ms-C.courseIdealMs*courseN;
  const tq=clamp01(1-Math.abs(err)/C.timingWindowMs);
  const dx=curX-judge.rx,dy=curY-judge.ry;
@@ -101,7 +112,7 @@ function batResultPhysics(p,ms,curX,curY){
   (F.spdMin+F.spdRange*meet)*(1-F.spdLoss*Math.pow(Math.abs(lift),1.5))
   +rnd(-1,1)*(1-meet)*F.nSpd);
 
- let k,distMeters=0;
+ let k,distMeters=null; // ゴロは飛距離を計算しない(推定飛距離なし=null)
  if(launch<F.groundAng){
   const hitChance=F.gHitMax*clamp01((speed-F.gHitFrom)/(F.gHitTo-F.gHitFrom));
   k=Math.random()<hitChance?'1B':'gr';
@@ -150,7 +161,8 @@ function cpuBat(){
  if(G.cnt.s===2)sw+=.15;
  if(Math.random()>=cl(sw,0,.98))return take();
  const typeFactor=p.type==='c'||p.type==='cu'?1.12:p.type==='f'?1.08:1;
- const ms=cpuNormalError(D.timingError*typeFactor*(rep?.88:1));
+ // 物理モデルではコース別の理想タイミングを中心にブレる(人間側の評価基準と揃える)
+ const ms=cpuNormalError(D.timingError*typeFactor*(rep?.88:1))+(CONFIG.batMode==='physics'?CONFIG.courseIdealMs*courseNOf(p):0);
  const [x,y]=bp(p,1),curX=cl(x+cpuNormalError(D.positionError),0,220),curY=cl(y+cpuNormalError(D.positionError),0,220);
  G.swingT=performance.now();
  const r=batResult(p,ms,curX,curY);

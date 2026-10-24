@@ -128,11 +128,12 @@ function showDetailMsg(k, ms, info) {
  };
  const parts = [typeName, actions[k] || k];
  if (ms != null && Number.isFinite(ms)) {
-  const absMs = Math.abs(ms);
+  // 表示も判定と同じ実効ズレ(コース別の理想タイミングを差し引いた値)で評価する
+  const ems = effMs(p, ms), absMs = Math.abs(ems);
   const timing = absMs >= CONFIG.labelNearMs
-   ? (ms < 0 ? '早すぎ' : '遅すぎ')
+   ? (ems < 0 ? '早すぎ' : '遅すぎ')
    : absMs >= CONFIG.labelPerfectMs
-    ? (ms < 0 ? '少し早い' : '少し遅い')
+    ? (ems < 0 ? '少し早い' : '少し遅い')
     : '完璧';
   parts.push(`タイミング：${timing}`);
   if (k === 'miss') parts.push('ミート：空振り');
