@@ -44,7 +44,10 @@ function fpos(i,now){const b=FD[i],f=G.fl;
  if(!f||f.fi===undefined)return b;
  if(i===f.ri){const q=Math.hypot(f.to.x-b[0],f.to.y-b[1])||1,e=Math.min(1,(now-f.t0)/450);return[b[0]+(f.to.x-b[0])/q*16*e,b[1]+(f.to.y-b[1])/q*16*e]}
  if(i!==f.fi)return b;
- 
+ // ダブルプレーの案B: 捕球した二遊間がボールを持って二塁へ走る(送球ステップの carry と同期)
+ const th=G.th;
+ if(th&&th.steps&&th.steps[0]&&th.steps[0].carry&&now>=th.t0){const p=cl((now-th.t0)/th.steps[0].dur,0,1);return[f.to.x+(BS[2].x-f.to.x)*p,f.to.y+(BS[2].y-f.to.y)*p]}
+
  const targetTo = f.isHit && i >= 6 ? outfieldTarget(f.to) : f.to;
 
  const dx=targetTo.x-HP.x,dy=targetTo.y-HP.y,k=Math.min(1,(R-14)/Math.hypot(dx,dy)),tx=HP.x+dx*k,ty=HP.y+dy*k,d=Math.hypot(tx-b[0],ty-b[1]);
@@ -93,7 +96,7 @@ function drawTh(now){const t=G.th;
  if(t.steps){let el=now-t.t0,st=0,pos=null;
   for(const q of t.steps){const a=st+(q.dly||0),b=a+q.dur;
    if(el<a){pos=[q.from.x,q.from.y];break}
-   if(el<b){const p=(el-a)/q.dur;pos=[q.from.x+(q.to.x-q.from.x)*p,q.from.y+(q.to.y-q.from.y)*p-Math.sin(p*P)*14];break}
+   if(el<b){const p=(el-a)/q.dur;pos=[q.from.x+(q.to.x-q.from.x)*p,q.from.y+(q.to.y-q.from.y)*p-(q.carry?0:Math.sin(p*P)*14)];break}
    st=b;pos=[q.to.x,q.to.y]}
   if(pos)dot(pos[0],pos[1],4,'#fff','#c33')}
  else{const p=(now-t.t0)/t.dur;if(p>=0&&p<1){const x=t.from.x+(t.to.x-t.from.x)*p,y=t.from.y+(t.to.y-t.from.y)*p-Math.sin(p*P)*14;dot(x,y,4,'#fff','#c33')}}}
