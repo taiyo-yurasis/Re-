@@ -64,6 +64,7 @@ const CONFIG = {
  sacFlyDeepRate: 0.7,
  tagUpDepth: 240,       // これ以上深いフライで、二塁走者がタッチアップして三塁へ進める(三塁が空いているとき)
  tagUpSecondRate: 0.25,
+ flyPxPerM: 4.6,        // 物理モデルの飛距離(m)をフライ処理の距離(px)に換算する係数(HR下限75mが描画345px相当)
 
  /* ---- 空振りの境界 ---- */
  timingWindowMs: 220,   // ジャストから±この範囲を超えると空振り

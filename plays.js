@@ -210,8 +210,15 @@ function resultGround(ms,info){
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return
 }
 
+// フライの飛距離(px)。物理モデルは飛距離(m)を返すので、描画と犠飛判定の尺度(px)に換算する。
+// 飛距離の情報がない場合(table方式など)は従来どおりランダム。
+function flyDistPx(info){
+ if(info&&Number.isFinite(info.dist))return cl(Math.round(info.dist*CONFIG.flyPxPerM),90,260);
+ return rnd(160,270);
+}
+
 function resultFly(ms,info){
- const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=rnd(160,270);banner('フライ!');
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=flyDistPx(info);banner('フライ!');
   const fto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info);
   const isFinePlay=Math.random()<CONFIG.finePlayFly;
