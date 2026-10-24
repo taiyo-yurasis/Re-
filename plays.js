@@ -1,12 +1,29 @@
 function addMatchPts(team,points){G.pts[team]=(G.pts[team]||0)+points}
 /* plays.js — 打った後の処理(アウト/ヒット/四球・走者の進塁・送球) */
-function throwPlan(to, targetBase){
+// 中継に入る野手(守備位置)。送球先と捕球した野手(外野手)で決まる。0は中継なし。
+// 本塁への送球: ライト→セカンド、レフト→ショート、センター→打球の左右でセカンド/ショート。
+// 三塁への送球はライトからのみセカンド。それ以外(二塁・一塁への送球、内野手の捕球)は中継なし。
+function relayMan(fi, to, targetBase){
+ if(targetBase === 4){
+  if(fi === 8) return 3;
+  if(fi === 6) return 4;
+  if(fi === 7) return to.x < HP.x ? 4 : 3;
+  return 0;
+ }
+ if(targetBase === 3 && fi === 8) return 3;
+ return 0;
+}
+
+function throwPlan(to, targetBase, fi){
  const tp = targetBase === 4 ? {x: HP.x, y: HP.y} : {x: BS[targetBase].x, y: BS[targetBase].y};
- const L = (a, b) => Math.hypot(a.x - b.x, a.y - b.y), dd = L(to, tp), relay = dd >= 130 && Math.random() < cl((dd - 130) / 140, .25, .85);
- const cov = targetBase === 2 ? 4 : targetBase === 3 ? 5 : 1, rm = targetBase === 4 ? 2 : 3, mv = [], sp = .55;
+ const L = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+ const rm = relayMan(fi, to, targetBase), relay = rm !== 0 && Math.random() < .5;
+ const cov = targetBase === 2 ? 4 : targetBase === 3 ? 5 : 1, mv = [], sp = .55;
  let R = null;
  if(relay){R = {x: tp.x + (to.x - tp.x) * .4, y: tp.y + (to.y - tp.y) * .4}; mv.push({i: rm, x: R.x, y: R.y, T: Math.max(500, Math.hypot(FD[rm][0] - R.x, FD[rm][1] - R.y) / .1)})}
  if(cov !== 1) mv.push({i: cov, x: tp.x, y: tp.y, T: Math.max(500, Math.hypot(FD[cov][0] - tp.x, FD[cov][1] - tp.y) / .1)});
+ // 本塁への送球では、中継に入らない方の二遊間が二塁をカバーする
+ if(targetBase === 4 && rm !== 0){const c2 = rm === 3 ? 4 : 3; mv.push({i: c2, x: BS[2].x, y: BS[2].y, T: Math.max(500, Math.hypot(FD[c2][0] - BS[2].x, FD[c2][1] - BS[2].y) / .1)})}
  const steps = R ? [{from: to, to: R, dur: Math.max(220, L(to, R) / sp)}, {from: R, to: tp, dur: Math.max(200, L(R, tp) / sp), dly: 150}] : [{from: to, to: tp, dur: Math.max(250, L(to, tp) / sp)}];
  return {steps, mv};
 }
@@ -82,7 +99,7 @@ function safeAtFirst(kind,to,ms,isHit,info){
   score(r);
   if(r)banner(`+${r}点!`);
   if(G.fl){
-   const pl=throwPlan(G.fl.to,1);
+   const pl=throwPlan(G.fl.to,1,G.fl.fi);
    G.th={id:++pid,t0:performance.now(),steps:pl.steps};
    if(pl.mv.length)G.rl={id:++pid,t0:performance.now(),moves:pl.mv};
   }
@@ -196,17 +213,33 @@ function resultGround(ms,info){
    if(r)banner(`+${r}点!`);
    if(G.fl){
     if(dp){
-     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[2],dur:250},{from:BS[2],to:BS[1],dur:250}],currentStep:0};
+     // 案B(捕球した二遊間が二塁の近くで捕球)では、1段目は送球ではなくボールを持って二塁へ走る
+     const self=G.fl.dpSelf,carryDur=self?Math.max(250,Math.hypot(G.fl.to.x-BS[2].x,G.fl.to.y-BS[2].y)/.12):250;
+     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[2],dur:carryDur,...(self?{carry:true}:{})},{from:BS[2],to:BS[1],dur:250}],currentStep:0};
     }else G.th={id:++pid,t0:performance.now(),dur:380,from:G.fl.to,to:BS[1]};
    }
    showDetailMsg('gr',ms,info);fin(800)
   },1);
-  // 一塁手(守備位置2)がゴロを処理した場合、投手(守備位置0)が一塁をカバーする。
-  // 送球演出が一塁へ向かう間にカバーが間に合うよう、守備位置の移動を表示する。
-  if(G.fl && G.fl.fi===2){
-   const from={x:FD[0][0],y:FD[0][1]},to=BS[1];
-   const T=Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/.12);
-   G.rl={id:++pid,t0:performance.now(),moves:[{i:0,x:to.x,y:to.y,T}]};
+  // ベースカバーの移動。送球が始まる前に動き出せるよう、打球の発生と同時に rl へ登録する。
+  if(G.fl){
+   const rlMoves=[];
+   // 一塁手(守備位置2)がゴロを処理した場合、投手(守備位置0)が一塁をカバーする
+   if(G.fl.fi===2){
+    const from={x:FD[0][0],y:FD[0][1]},to=BS[1];
+    rlMoves.push({i:0,x:to.x,y:to.y,T:Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/.12)});
+   }
+   if(dp){
+    const fi=G.fl.fi;
+    if((fi===3||fi===4)&&Math.hypot(G.fl.to.x-BS[2].x,G.fl.to.y-BS[2].y)<=65){
+     // 案B: セカンド/ショートが二塁の近くで捕球したら、自分で二塁を踏んでから一塁へ送球する
+     G.fl.dpSelf=true;
+    }else{
+     // 案A: 相方の二遊間(投手の捕球時は二塁に近い方)が二塁をカバーする
+     const cov=fi===3?4:fi===4?3:fi===5?4:fi===2?3:nrst(BS[2],[3,4]);
+     rlMoves.push({i:cov,x:BS[2].x,y:BS[2].y,T:Math.max(250,Math.hypot(FD[cov][0]-BS[2].x,FD[cov][1]-BS[2].y)/.12)});
+    }
+   }
+   if(rlMoves.length)G.rl={id:++pid,t0:performance.now(),moves:rlMoves};
   }
   const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return
 }
@@ -300,7 +333,7 @@ function hit(k, ms, info) {
  
  const actualTo = outfieldTarget(to);
 
- const pl = targetBaseForThrow === 0 ? null : throwPlan(actualTo, targetBaseForThrow);
+ const pl = targetBaseForThrow === 0 ? null : throwPlan(actualTo, targetBaseForThrow, o ? o.fi : undefined);
  
  flight(to, k==='HR'?'hr':ground?'ground':'fly', () => {
   score(r);
