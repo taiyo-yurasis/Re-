@@ -50,20 +50,42 @@ test('swinging below the ball raises launch angle: under > center > above', () =
 
 test('physics outcomes follow the configured distance thresholds', () => {
   const context = createContext();
-  vm.runInContext('CONFIG.phys.spdRange=100', context);
-  const homeRun = swing(context, {x:110, y:110, ms:0});
+  // Swinging under the ball lifts it into home-run range at the calibrated scale
+  const homeRun = swing(context, {x:110, y:110, ms:0, cy:116});
   assert.equal(homeRun.k, 'HR');
   assert.ok(homeRun.dist >= vm.runInContext('CONFIG.phys.hrMin', context));
 
-  vm.runInContext('CONFIG.phys.spdRange=50', context);
+  // A dead-center liner carries to the outfield but stays inside hitMax
   const single = swing(context, {x:110, y:110, ms:0});
   assert.equal(single.k, '1B');
   assert.ok(single.dist >= vm.runInContext('CONFIG.phys.inField', context) && single.dist < vm.runInContext('CONFIG.phys.hitMax', context));
 
-  vm.runInContext('CONFIG.phys.spdRange=35', context);
+  vm.runInContext('CONFIG.phys.spdRange=30', context);
   const shortFly = swing(context, {x:110, y:110, ms:0});
   assert.equal(shortFly.k, 'fly');
   assert.ok(shortFly.dist < vm.runInContext('CONFIG.phys.inField', context));
+});
+
+test('angle drag keeps a steep popup from carrying like a fly ball', () => {
+  const context = createContext();
+  const popup = swing(context, {x:110, y:110, ms:0, cy:126});
+  assert.ok(popup.launch >= 50);
+  assert.equal(popup.k, 'fly');
+  assert.ok(popup.dist < vm.runInContext('CONFIG.phys.inField', context));
+});
+
+test('deep flies in the extra-base zone can be caught at the warning track', () => {
+  const caught = createContext();
+  const deepFly = swing(caught, {x:110, y:110, ms:70, cy:115});
+  assert.ok(deepFly.launch >= 25);
+  assert.ok(deepFly.dist >= 80 && deepFly.dist < 110);
+  assert.equal(deepFly.k, 'fly'); // Math.random()=0.5 < wtOut (0.65)
+
+  const dropped = createContext();
+  vm.runInContext('Math.random=()=>0.9;', dropped);
+  const double = swing(dropped, {x:110, y:110, ms:100, cy:115});
+  assert.ok(double.dist >= 80 && double.dist < 110);
+  assert.equal(double.k, '2B');
 });
 
 test('table mode remains available and does not return physics-only speed fields', () => {
