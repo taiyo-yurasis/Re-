@@ -22,8 +22,10 @@ function pracResult(k,ms,info){
  let parts=[TY_NAMES[p.type]];
  if(ms!=null){
   const judge=judgeRef(p,ms,G.cur.x,G.cur.y),dd=judge.dd,lift=(G.cur.y-judge.ry)/CONFIG.cursorSize,J=CONFIG.judge||{};
-  S.sw++;S.msSum+=ms;
-  parts.push(`${ms<0?'早い':'遅い'} ${Math.abs(ms).toFixed(0)}ms`);
+  // タイミング表示と平均ズレは、判定と同じ実効ズレ(コース別の理想を差し引いた値)で出す
+  const ems=effMs(p,ms);
+  S.sw++;S.msSum+=ems;
+  parts.push(`${ems<0?'早い':'遅い'} ${Math.abs(ems).toFixed(0)}ms`);
   parts.push(J.nearer&&J.nearer[p.type]?`距離 ${dd.toFixed(0)}px(基準:${judge.usedBall?'ボール':'着地点'})`:`距離 ${dd.toFixed(0)}px`);
   const correctionScale=CONFIG.batMode==='physics'?(Number.isFinite(CONFIG.physicsCorrectionScale)?CONFIG.physicsCorrectionScale:1):1;
   if(judge.bonusRate*correctionScale>0)parts.push(`ミート+${(judge.bonusRate*correctionScale*100).toFixed(0)}%`);
@@ -32,7 +34,7 @@ function pracResult(k,ms,info){
   if(k==='miss')parts.push(Math.abs(ms)>CONFIG.timingWindowMs?'タイミング外':dd>CONFIG.cursorSize?'カーソルが遠い':'ボール球を振った');
   if(info&&info.tier){S.tier[info.tier]++;parts.push('ミート:'+L[info.tier0||info.tier]+(info.tier0&&info.tier0!==info.tier?'→'+L[info.tier]:''))}
   if(k==='foul'&&info&&info.angle!=null)parts.push(`角度 ${info.angle.toFixed(0)}°`);
-  if(info&&Number.isFinite(info.speed))parts.push(`打球 ${info.speed.toFixed(0)}km/h / 角度 ${info.launch.toFixed(0)}° / 推定飛距離 ${info.dist.toFixed(0)}m`);
+  if(info&&Number.isFinite(info.speed))parts.push(`打球 ${info.speed.toFixed(0)}km/h / 角度 ${info.launch.toFixed(0)}°`+(Number.isFinite(info.dist)?` / 推定飛距離 ${info.dist.toFixed(0)}m`:''));
   if(info&&info.dir){parts.push(`${PR_DL[info.dir]}×${PR_CL[info.course]}`,lift>CONFIG.liftBand?'フライ寄り':lift<-CONFIG.liftBand?'ゴロ寄り':'ライナー')}
  }
  if(k==='ball')S.ball++;else if(k==='look')S.look++;else if(k==='miss')S.miss++;else if(k==='foul')S.foul++;else{S.play++;S.res[k]++}
