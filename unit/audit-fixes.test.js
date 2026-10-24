@@ -124,3 +124,36 @@ test('snap carries isHit and validSnap accepts long extra-inning games', () => {
   snap.f.isHit = 'yes';
   assert.equal(vm.runInContext('validSnap', context)(snap), false);
 });
+
+test('validSnap rejects oversized move lists and out-of-range flight height', () => {
+  const document = makeDocument();
+  const context = { document, setTimeout, clearTimeout, setInterval: () => 0, performance: { now: () => 1000 } };
+  vm.createContext(context);
+  load(context, ['config.js', 'core.js', 'net.js']);
+  vm.runInContext(`
+    G.net = 'host'; G.gid = 1; G.me = 0; G.seq = 0;
+    G.phase = 'idle'; G.swingT = 0; G.N = 3; G.pts = [0, 0];
+    G.top = true; G.outs = 0; G.cnt = { b: 0, s: 0 }; G.bases = [0, 0, 0, 0]; G.hits = [0, 0];
+    G.inn = 3; G.runs = [[0, 0, 0], [0, 0, 0]];
+    G.fl = { id: 1, out: true, fi: 7, ri: 7, wall: false, isHit: true, to: { x: 100, y: 100 }, kind: 'hit', dur: 900, h: 130, diving: false, t0: 900 };
+  `, context);
+  const validSnap = vm.runInContext('validSnap', context);
+  const base = vm.runInContext('snap()', context);
+  assert.equal(validSnap(base), true);
+  const move = () => ({ a: 0, b: 1 });
+  const manyMoves = { ...base, mv: { id: 1, age: 0, moves: Array.from({ length: 21 }, move), stay: [] } };
+  assert.equal(validSnap(manyMoves), false);
+  const fewMoves = { ...base, mv: { id: 1, age: 0, moves: Array.from({ length: 6 }, move), stay: [] } };
+  assert.equal(validSnap(fewMoves), true);
+  assert.equal(validSnap({ ...base, f: { ...base.f, h: 10000 } }), false);
+  assert.equal(validSnap({ ...base, f: { ...base.f, h: 300 } }), true);
+});
+
+test('resultBall on ball four updates the detail message to a walk', () => {
+  const context = playsContext();
+  context.__msgs = [];
+  vm.runInContext('setMsg = (t) => { __msgs.push(t); };', context);
+  vm.runInContext("G.cnt = { b: 3, s: 0 }; G.bases = [0, 0, 0, 0]; G.top = true; G.runs = [[0], [0]]; G.pts = [0, 0]; G.pitch = { type: 's' };", context);
+  context.resultBall(null);
+  assert.ok(context.__msgs.some((t) => t.includes('フォアボール')));
+});

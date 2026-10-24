@@ -30,7 +30,9 @@ const tierOf=m=>m>=CONFIG.meetSolid?'solid':m>=CONFIG.meetNormal?'normal':'weak'
 
 // 従来方式(CPUローカル/オンライン共通)。hitTable による結果抽選
 // p:投球 ms:ジャストとのズレ(負=早い) curX,curY:カーソル位置
-// 距離・高さは投球の着地点(ボールが届く位置)とカーソルで決める。ボールが途中のどこにいるかは関係ない(早い・遅いはタイミング点だけに効く)
+// 距離・高さの基準点は judgeRef が決める。通常は投球の着地点(ボールが届く位置)だが、
+// CONFIG.judge.nearer が true の球種(現状はカーブのみ)は、着地点とスイング時の
+// ボール位置のうちカーソルに近い方を使う。早い・遅いの評価はタイミング点だけに効く。
 function batResultTable(p,ms,curX,curY){
  const C=CONFIG,[lx]=bp(p,1),judge=judgeRef(p,ms,curX,curY),dd=judge.dd,d=dist(p);
  if(!isFinite(ms)||!isFinite(dd)||Math.abs(ms)>C.timingWindowMs||dd>C.cursorSize)return {k:'miss'};

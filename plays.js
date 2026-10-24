@@ -112,6 +112,7 @@ function showDetailMsg(k, ms, info) {
  const typeName = p && TY_NAMES[p.type] ? TY_NAMES[p.type] : '球種不明';
  const actions = {
   ball: 'ボール',
+  walk: 'フォアボール',
   look: '見逃しストライク',
   miss: '空振り',
   fine: 'ファインプレーでアウト！',
@@ -147,7 +148,7 @@ function showDetailMsg(k, ms, info) {
 
 function resultBall(ms,info){
  const c=G.cnt;
- c.b++;if(c.b>=4){banner('フォアボール');walk();return fin(1100)}showDetailMsg('ball', null);return next(800)
+ c.b++;if(c.b>=4){banner('フォアボール');walk();showDetailMsg('walk', null);return fin(1100)}showDetailMsg('ball', null);return next(800)
 }
 
 function resultStrike(k,ms,info){

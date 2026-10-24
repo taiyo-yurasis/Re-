@@ -78,8 +78,8 @@ function validSnap(s){
   (s.f.wall!=null&&typeof s.f.wall!=='boolean')||(s.f.diving!=null&&typeof s.f.diving!=='boolean')||
   (s.f.fi!=null&&!intRange(s.f.fi,0,FD.length-1))||(s.f.ri!=null&&!intRange(s.f.ri,0,FD.length-1))||
   (s.f.isHit!=null&&typeof s.f.isHit!=='boolean')||
-  (s.f.h!=null&&!Number.isFinite(s.f.h))))return false;
- if(s.mv!=null&&(!validMotion(s.mv)||!Array.isArray(s.mv.moves)||!Array.isArray(s.mv.stay)||
+  (s.f.h!=null&&!numRange(s.f.h,0,300))))return false;
+ if(s.mv!=null&&(!validMotion(s.mv)||!Array.isArray(s.mv.moves)||s.mv.moves.length>20||!Array.isArray(s.mv.stay)||
   s.mv.stay.some(v=>!intRange(v,0,3))||s.mv.moves.some(m=>!m||typeof m!=='object'||
    !intRange(m.a,0,3)||!intRange(m.b,0,4)||(m.T!=null&&!numRange(m.T,0.001,3600000))||
    (m.i!=null&&!intRange(m.i,0,FD.length-1))||(m.x!=null&&!numRange(m.x,0,480))||(m.y!=null&&!numRange(m.y,0,400)))))return false;
