@@ -5,7 +5,6 @@ function applyCpuPitchError(x,y,level=2){const d=CPU_DIFFICULTY[cl(Number(level)
 function breakAt(type,hand,u,py){
  const br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2),shape=CONFIG.pitchShape||{};
  switch(type){
-  case 'sl': return {x:-hand*30*Math.pow(Math.max(0,(u-.35)/.65),2),y:0};
   case 'c': {
    const cut=shape.c&&shape.c.lowCut;
    const lowk=cut&&Number.isFinite(py)&&cut.endY!==cut.startY
