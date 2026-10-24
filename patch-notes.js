@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.2.4';
+  const currentVersion = '1.2.5';
   const updates = [
+    {
+      version: '1.2.5',
+      title: '深いフライの表示を修正',
+      changes: [
+        '深いフライを外野手が捕球するとき、ボールがフェンスを越えて飛んでいくように見える問題を修正しました。'
+      ]
+    },
     {
       version: '1.2.4',
       title: '守備の連携プレーを改善',

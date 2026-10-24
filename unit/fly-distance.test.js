@@ -33,7 +33,8 @@ test('flyDistPx converts physics distance (m) to the fly-handling scale (px)', (
 test('flyDistPx clamps converted distances to the drawable range', () => {
   const context = createContext();
   assert.equal(context.flyDistPx({ dist: 10 }), 60);
-  assert.equal(context.flyDistPx({ dist: 120 }), 335);
+  // Upper clamp is the warning track (R-8 = 312px) so the ball never crosses the fence
+  assert.equal(context.flyDistPx({ dist: 120 }), 312);
 });
 
 test('flyDistPx stays monotonic so deeper batted balls fly farther on screen', () => {
