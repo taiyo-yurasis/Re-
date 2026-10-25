@@ -50,9 +50,8 @@ function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.
  if(!G.net&&!pitHuman()){setMsg('ボールが届く位置にカーソルを置いて、届く瞬間に離してスイング!');
   later(rnd(700,1300),()=>{
    if(G.prac){const pp=pracPitch();return throwP(pp.t,pp.x,pp.y)}
-   const keys=Object.keys(TY);const t=keys[ri(0,keys.length-1)];
-   const tgt=cpuAimTarget(cfgCpuDifficulty);
-   const aim=applyCpuPitchError(tgt.x,tgt.y,cfgCpuDifficulty);throwP(t,aim.x,aim.y)})}
+   const plan=cpuPlanPitch(cfgCpuDifficulty);
+   const aim=applyCpuPitchError(plan.x,plan.y,cfgCpuDifficulty);throwP(plan.type,aim.x,aim.y)})}
  else{G.phase='aim';setMsg(G.pvp?(G.top?'P2':'P1')+'投手: 球種を選んで狙って「投げる!」 / '+(G.top?'P1':'P2')+'は構えて!':'球種を選んで、カーソルで狙って、投げる!')}}
 
 function update(now){if(G.phase!=='pitch')return;const p=G.pitch;if(!p)return;if(!Number.isFinite(p.dur)||p.dur<=0){G.phase='busy';result('ball',null);return}p.t=(now-p.t0)/p.dur;

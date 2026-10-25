@@ -2,6 +2,37 @@
 function pitchTarget(){const team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x,0,220),y:cl(G.cur.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
 function applyPitchAimError(type,x,y){const j=TY[type].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
 function applyCpuPitchError(x,y,level=2){const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2],a=rnd(0,2*P),r=d.pitchAimError*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
+// カウント別の球種割合。Statcast 2025シーズン全試合の実測値 (行は [ボール-ストライク]、列は [s, sh, sl, c, cu, f])
+const CPU_SEQ={
+ '0-0':[33,19,30,9,7,2],'0-1':[29,14,31,8,14,4],'0-2':[32,7,32,12,12,5],
+ '1-0':[31,19,30,6,11,3],'1-1':[28,15,31,8,14,4],'1-2':[31,9,31,11,13,5],
+ '2-0':[38,22,27,4,7,2],'2-1':[32,18,30,6,11,3],'2-2':[31,12,29,10,13,5],
+ '3-0':[65,23,9,0,2,1],'3-1':[43,23,24,3,6,1],'3-2':[37,17,29,6,8,3]
+};
+const CPU_SEQ_TYPES=['s','sh','sl','c','cu','f'];
+const CPU_SEQ_ALL=[32,16,30,9,10,3]; // シーズン全体の割合
+function pickSeqType(weights){let r=Math.random()*100;for(let i=0;i<6;i++){r-=weights[i];if(r<0)return CPU_SEQ_TYPES[i]}return 's'}
+// CPU投手の1球の計画 (球種と、ブレを乗せる前の狙い) を返す
+function cpuPlanPitch(level=2){
+ const lv=cl(Number(level)||2,1,4),cnt=G.cnt||{b:0,s:0};
+ let type;
+ // 前の球を空振りしていたら、同じ球種をもう一度投げがち (実測で約53%)
+ const repRate=lv>=4?.53:lv>=3?.35:0,atBatStart=cnt.b===0&&cnt.s===0;
+ if(!atBatStart&&G.prevPitch&&G.prevPitch.res==='miss'&&Math.random()<repRate)type=G.prevPitch.type;
+ else if(lv<=1)type=CPU_SEQ_TYPES[ri(0,5)];
+ else{
+  const row=CPU_SEQ[cnt.b+'-'+cnt.s]||CPU_SEQ_ALL;
+  type=pickSeqType(lv===2?row.map((w,i)=>(w+CPU_SEQ_ALL[i])/2):row);
+ }
+ // 追い込んだら意図的にゾーンの外へ外して空振りを誘う。3ボールでは外さない
+ const chaseBase=cnt.b>=3?.05:cnt.s===2?.35:cnt.s===1?.15:.02;
+ if(Math.random()<chaseBase*(lv>=4?1:lv>=3?.5:0)){
+  const m=rnd(78,95)*(Math.random()<.5?-1:1),o=rnd(-80,80);
+  return Math.random()<.5?{type,x:110+m,y:110+o}:{type,x:110+o,y:110+m};
+ }
+ const tgt=cpuAimTarget(lv);
+ return{type,x:tgt.x,y:tgt.y};
+}
 // CPU投手の狙い。強いCPUほど、ゾーンの際(中心から60〜76px、枠線の内外をまたぐ帯)を狙う
 function cpuAimTarget(level=2){
  const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2];
