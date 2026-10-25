@@ -2,6 +2,16 @@
 function pitchTarget(){const team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x,0,220),y:cl(G.cur.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
 function applyPitchAimError(type,x,y){const j=TY[type].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
 function applyCpuPitchError(x,y,level=2){const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2],a=rnd(0,2*P),r=d.pitchAimError*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
+// CPU投手の狙い。強いCPUほど、ゾーンの際(中心から60〜76px、枠線の内外をまたぐ帯)を狙う
+function cpuAimTarget(level=2){
+ const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2];
+ if(Math.random()<(d.edgeRate||0)){
+  const m=rnd(60,76)*(Math.random()<.5?-1:1),s=rnd(-76,76);
+  return Math.random()<.5?{x:110+m,y:110+s}:{x:110+s,y:110+m};
+ }
+ if(Math.random()<.62)return{x:rnd(52,168),y:rnd(52,168)};
+ return{x:rnd(20,200),y:rnd(20,200)};
+}
 function breakAt(type,hand,u,py){
  const br=u*u*u,late=Math.pow(Math.max(0,(u-.7)/.3),2),shape=CONFIG.pitchShape||{};
  switch(type){

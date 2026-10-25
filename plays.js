@@ -197,12 +197,12 @@ function resultGround(ms,info){
    if(dp&&b===1)continue;
    if(G.outs===2){targets[b]=b===3?3:b+1;continue}
    if(endsInning){targets[b]=b;continue}
+   // ダブルプレーが成立したら、二塁・三塁の走者は必ず次の塁に進む
+   if(dp){targets[b]=b+1;continue}
    if(b===3)targets[b]=Math.random()<CONFIG.runGrThirdHome?4:3;
    else if(b===2)targets[b]=Math.random()<CONFIG.runGrSecondThird?3:2;
    else targets[b]=2;
   }
-  // 併殺で二塁走者だけが残るケースは、従来どおり三塁へ進める。
-  if(dp&&!endsInning&&before[2]&&!before[3])targets[2]=3;
   const runnerResult=settle(targets);
   applyRunnerResult(runnerResult);
   const r=runnerResult.runs;
