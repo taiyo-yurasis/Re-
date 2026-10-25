@@ -286,6 +286,7 @@ function resultFly(ms,info){
 }
 function result(k,ms,info){
  if(G.prac)return pracResult(k,ms,info);
+ if(G.pitch)G.prevPitch={type:G.pitch.type,res:k}; // CPU配球(空振りした球の連投など)が参照する
  if(k==='ball')return resultBall(ms,info);
  if(k==='look'||k==='miss')return resultStrike(k,ms,info);
  if(k==='foul')return resultFoul(ms,info);

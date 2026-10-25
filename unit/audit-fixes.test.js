@@ -33,7 +33,7 @@ function gameContext() {
   const document = makeDocument();
   const context = { document, setTimeout, clearTimeout, banners: [] };
   vm.createContext(context);
-  load(context, ['config.js', 'core.js', 'game.js']);
+  load(context, ['config.js', 'core.js', 'pitching.js', 'game.js']);
   vm.runInContext(`
     banner = (t) => { __banners.push(t); };
     updateHud = () => {};
