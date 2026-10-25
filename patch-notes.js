@@ -1,7 +1,15 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.3.0';
+  const currentVersion = '1.3.1';
   const updates = [
+    {
+      version: '1.3.1',
+      title: 'エラーとファインプレーの確率を調整',
+      changes: [
+        '野手のエラーの確率を10%から5%に下げました。',
+        'ヒット性の当たりがファインプレーで取られる確率も10%から5%に下げました。'
+      ]
+    },
     {
       version: '1.3.0',
       title: 'CPU投手の配球をMLBの実データに基づいて再現',
