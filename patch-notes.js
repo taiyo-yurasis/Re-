@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.2.5';
+  const currentVersion = '1.2.6';
   const updates = [
+    {
+      version: '1.2.6',
+      title: 'ストライクゾーンの判定を微調整',
+      changes: [
+        'ストライクの判定範囲を、ゾーンの黄色い枠線の外側の縁まで広げました。枠に中心がかかっているボールはストライクになります。'
+      ]
+    },
     {
       version: '1.2.5',
       title: '深いフライの表示を修正',
