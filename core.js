@@ -15,4 +15,6 @@ let G={id:0};
 const later=(ms,fn)=>{const id=G.id;setTimeout(()=>{if(G.id===id)fn()},ms)};
 const tot=t=>G.runs[t].reduce((a,b)=>a+b,0);
 const batHuman=()=>G.net?(G.top?0:1)===G.me:G.pvp||(G.top?0:1)===G.humanTeam,pitHuman=()=>G.net?(G.top?1:0)===G.me:G.pvp||(G.top?1:0)===G.humanTeam;
-const dist=p=>{const [x,y]=bp(p,1),m=Math.max(Math.abs(x-110),Math.abs(y-110))/66;return m<=.4?0:m<=1?1:m<=1.5?2:3};
+// 着地点のゾーン分類: 0=甘い 1=ゾーン内 2=際どい外 3=はっきり外。
+// ゾーン内の境界は、表示される枠線(太さ3px)の外側の縁に合わせて中心から67.5pxとする
+const dist=p=>{const [x,y]=bp(p,1),m=Math.max(Math.abs(x-110),Math.abs(y-110));return m<=26.4?0:m<=67.5?1:m<=99?2:3};
