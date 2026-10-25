@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
-const sources = ['config.js', 'core.js', 'game.js'];
+const sources = ['config.js', 'core.js', 'pitching.js', 'game.js'];
 
 function element() {
   return {
