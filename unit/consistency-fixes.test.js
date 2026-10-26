@@ -69,9 +69,9 @@ test('effMs subtracts the course ideal in physics mode only', () => {
     context.__ms = ms;
     return vm.runInContext('effMs(__p, __ms)', context);
   };
-  assert.equal(eff(176, 25), 0);   // outside: +25ms late is ideal
-  assert.equal(eff(176, 0), -25);
-  assert.equal(eff(44, -25), 0);   // inside: -25ms early is ideal
+  assert.equal(eff(176, 40), 0);   // outside: +40ms late is ideal
+  assert.equal(eff(176, 0), -40);
+  assert.equal(eff(44, -40), 0);   // inside: -40ms early is ideal
   assert.equal(eff(110, 10), 10);  // middle: no adjustment
   vm.runInContext("CONFIG.batMode='table';", context);
   assert.equal(eff(176, 25), 25);  // table mode judges raw ms, so displays keep raw ms
@@ -95,7 +95,7 @@ test('CPU batter timing error is centered on the course ideal', () => {
   const middle = cpuSwingMs(110);
   const outside = cpuSwingMs(176);
   assert.ok(Number.isFinite(middle) && Number.isFinite(outside));
-  assert.equal(outside - middle, 25); // courseIdealMs at courseN=1
+  assert.equal(outside - middle, 40); // courseIdealMs at courseN=1
 });
 
 /* ---- ⑥ ground balls report no estimated distance ---- */

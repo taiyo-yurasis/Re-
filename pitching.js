@@ -2,16 +2,17 @@
 function pitchTarget(){const team=G.top?1:0;return{type:G.sel,x:cl(G.cur.x,0,220),y:cl(G.cur.y,0,220),sg:G.pitcherHands?G.pitcherHands[team]:1}}
 function applyPitchAimError(type,x,y){const j=TY[type].j,a=rnd(0,2*P),r=j*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
 function applyCpuPitchError(x,y,level=2){const d=CPU_DIFFICULTY[cl(Number(level)||2,1,4)]||CPU_DIFFICULTY[2],a=rnd(0,2*P),r=d.pitchAimError*Math.sqrt(Math.random());return{x:cl(x+r*Math.cos(a),0,220),y:cl(y+r*Math.sin(a),0,220)}}
-// カウント別の球種割合。Statcast 2025シーズン全試合の実測値 (行は [ボール-ストライク]、列は [s, sh, sl, c, cu, f])
+// カウント別の球種割合。Statcast 2025シーズン全試合の実測値 (行は [ボール-ストライク]、列は [s, sh, sl, c, cu, f, ct, ss])
+// カットボールは実データのカッター(FC)、超スローボールはイーファス(EP)の実測割合 (EPは全体の0.13%で全カウント0)
 const CPU_SEQ={
- '0-0':[33,19,30,9,7,2],'0-1':[29,14,31,8,14,4],'0-2':[32,7,32,12,12,5],
- '1-0':[31,19,30,6,11,3],'1-1':[28,15,31,8,14,4],'1-2':[31,9,31,11,13,5],
- '2-0':[38,22,27,4,7,2],'2-1':[32,18,30,6,11,3],'2-2':[31,12,29,10,13,5],
- '3-0':[65,23,9,0,2,1],'3-1':[43,23,24,3,6,1],'3-2':[37,17,29,6,8,3]
+ '0-0':[33,19,21,9,7,2,9,0],'0-1':[30,14,23,8,14,4,7,0],'0-2':[32,7,28,12,12,5,4,0],
+ '1-0':[31,19,20,6,11,3,10,0],'1-1':[28,15,23,8,14,4,8,0],'1-2':[31,9,27,11,13,5,4,0],
+ '2-0':[38,22,16,4,7,2,11,0],'2-1':[32,18,21,6,11,3,9,0],'2-2':[30,12,24,10,13,5,6,0],
+ '3-0':[67,23,4,0,1,0,5,0],'3-1':[42,23,14,3,6,1,11,0],'3-2':[38,17,21,6,8,2,8,0]
 };
-const CPU_SEQ_TYPES=['s','sh','sl','c','cu','f'];
-const CPU_SEQ_ALL=[32,16,30,9,10,3]; // シーズン全体の割合
-function pickSeqType(weights){let r=Math.random()*100;for(let i=0;i<6;i++){r-=weights[i];if(r<0)return CPU_SEQ_TYPES[i]}return 's'}
+const CPU_SEQ_TYPES=['s','sh','sl','c','cu','f','ct','ss'];
+const CPU_SEQ_ALL=[32,16,22,9,10,3,8,0]; // シーズン全体の割合
+function pickSeqType(weights){let r=Math.random()*100;for(let i=0;i<weights.length;i++){r-=weights[i];if(r<0)return CPU_SEQ_TYPES[i]}return 's'}
 // CPU投手の1球の計画 (球種と、ブレを乗せる前の狙い) を返す
 function cpuPlanPitch(level=2){
  const lv=cl(Number(level)||2,1,4),cnt=G.cnt||{b:0,s:0};
@@ -19,7 +20,7 @@ function cpuPlanPitch(level=2){
  // 前の球を空振りしていたら、同じ球種をもう一度投げがち (実測で約53%)
  const repRate=lv>=4?.53:lv>=3?.35:0,atBatStart=cnt.b===0&&cnt.s===0;
  if(!atBatStart&&G.prevPitch&&G.prevPitch.res==='miss'&&Math.random()<repRate)type=G.prevPitch.type;
- else if(lv<=1)type=CPU_SEQ_TYPES[ri(0,5)];
+ else if(lv<=1)type=CPU_SEQ_TYPES[ri(0,CPU_SEQ_TYPES.length-1)];
  else{
   const row=CPU_SEQ[cnt.b+'-'+cnt.s]||CPU_SEQ_ALL;
   type=pickSeqType(lv===2?row.map((w,i)=>(w+CPU_SEQ_ALL[i])/2):row);
@@ -59,6 +60,8 @@ function breakAt(type,hand,u,py){
    return {x:-hand*(Number.isFinite(sh.xBreak)?sh.xBreak:30)*shLate,y:0};
   }
   case 'cu': return {x:hand*6*br,y:11*br};
+  case 'ct': return {x:hand*26*Math.pow(cl((u-.72)/.28,0,1),2),y:0};
+  case 'ss': return {x:hand*8*Math.sin(P*u),y:-95*Math.sin(P*u)+34*late};
   default:return {x:0,y:0};
  }
 }
