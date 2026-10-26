@@ -8,7 +8,9 @@ const TY={
  c:{d:1500,j:12},
  f:{d:1250,j:16},
  sh:{d:1200,j:10},
- cu:{d:1500,j:8}
+ cu:{d:1500,j:8},
+ ct:{d:1020,j:9},
+ ss:{d:3000,j:14}
 };
 
 const TY_NAMES = {
@@ -17,7 +19,9 @@ const TY_NAMES = {
  c: 'カーブ',
  f: 'フォーク',
  sh: 'ツーシーム',
- cu: 'チェンジアップ'
+ cu: 'チェンジアップ',
+ ct: 'カットボール',
+ ss: '超スローボール'
 };
 
 /* ---- CPU難易度(1=初心者〜4=最強) ---- */
@@ -32,7 +36,7 @@ const CPU_DIFFICULTY = {
 const CONFIG = {
  batMode: 'physics',       // 'physics' = 打球物理モデル / 'table' = 従来の hitTable
  physicsCorrectionScale: 0.25, // 物理モデルでの球種ボーナス・遅れ補正の倍率
- courseIdealMs: 25,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)
+ courseIdealMs: 40,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)
  dirCourseDeg: 28,          // コースによる打球方向の角度(deg)
  meetVertWeight: 0.4,       // ミート距離における上下ズレの重み
  meetNoiseX: 0.08,          // 横ズレに応じたミート度のランダム幅
@@ -75,11 +79,11 @@ const CONFIG = {
  /* ---- 空振りの境界 ---- */
  timingWindowMs: 220,   // ジャストから±この範囲を超えると空振り
  judge: {
-  nearer: { s:false, sl:false, c:true, f:false, sh:false, cu:false }, // 方式A: 着地点とスイング時のボール位置の近い方を基準にする
-  bonus: { s:false, sl:false, c:true, f:false, sh:true, cu:false }, // 方式B: ジャスト付近のミート度ボーナス
+  nearer: { s:false, sl:false, c:true, f:false, sh:false, cu:false, ct:false, ss:false }, // 方式A: 着地点とスイング時のボール位置の近い方を基準にする
+  bonus: { s:false, sl:false, c:true, f:false, sh:true, cu:false, ct:false, ss:false }, // 方式B: ジャスト付近のミート度ボーナス
   bonusRadius: 16,
-  bonusMax: { s:0, sl:0, c:0.85, f:0, sh:0.75, cu:0 },
-  latePenalty: { s:0, sl:0, c:0.50, f:0, sh:0.50, cu:0 }
+  bonusMax: { s:0, sl:0, c:0.85, f:0, sh:0.75, cu:0, ct:0, ss:0 },
+  latePenalty: { s:0, sl:0, c:0.50, f:0, sh:0.50, cu:0, ct:0, ss:0 }
  },
  pitchShape: {
   c: { lowCut: { strength:0.7, startY:110, endY:176 } },

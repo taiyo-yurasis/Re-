@@ -1,5 +1,5 @@
 /* practice.js — 打撃練習モード(自由練習)。結果を横取りして成績に集計し、約1〜2秒後に次の球を出す */
-const pracCfg={types:new Set(['s','sl','c','f','sh','cu']),course:'r'};
+const pracCfg={types:new Set(['s','sl','c','f','sh','cu','ct','ss']),course:'r'};
 const PR_RL={ball:'ボール',look:'見逃しストライク',miss:'空振り',foul:'ファウル','1B':'ヒット','2B':'ツーベース','3B':'スリーベース',HR:'ホームラン!!',fly:'フライアウト',gr:'ゴロアウト'};
 const PR_DL={pull:'引っ張り',center:'センター',oppo:'流し'},PR_CL={in:'内角',mid:'真ん中',out:'外角'};
 const pracStats=()=>({n:0,sw:0,msSum:0,miss:0,foul:0,look:0,ball:0,play:0,res:{'1B':0,'2B':0,'3B':0,HR:0,fly:0,gr:0},tier:{solid:0,normal:0,weak:0}});
