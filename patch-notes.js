@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.3.1';
+  const currentVersion = '1.3.2';
   const updates = [
+    {
+      version: '1.3.2',
+      title: '打撃練習で打者の左右を選べるように',
+      changes: [
+        '打撃練習の設定に「打者」の選択（右のみ／左のみ／左右ランダム）を追加しました。試合設定の打者設定と連動します。'
+      ]
+    },
     {
       version: '1.3.1',
       title: 'エラーとファインプレーの確率を調整',

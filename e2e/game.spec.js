@@ -77,3 +77,14 @@ test('practice detail updates on a swing but is preserved on a take', async ({ p
   await expect(detail).toHaveText(previous);
 });
 
+test('practice batter side can be chosen on the practice screen', async ({ page }) => {
+  await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
+  await page.goto('/');
+  await page.getByRole('button', { name: '打撃練習' }).click();
+  await page.locator('#prac-box [data-bs="left"]').click();
+  await expect(page.locator('#prac-box [data-bs="left"]')).toHaveClass(/on/);
+  // The choice is shared with the match setup screens
+  await expect(page.locator('#setup-cpu [data-bs="left"]')).toHaveClass(/on/);
+  await page.getByRole('button', { name: '練習スタート' }).click();
+  await expect.poll(() => page.evaluate(() => G.batterSides[0])).toBe('left');
+});
