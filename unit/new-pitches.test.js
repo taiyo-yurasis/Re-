@@ -90,7 +90,8 @@ test('course ideal timing is 40ms and CPU sequencing knows the cutter', () => {
   }
   const ctShare = (counts.ct || 0) / N;
   assert.ok(ctShare > 0.05 && ctShare < 0.13, `Lv4 0-0 cutter share ${ctShare.toFixed(2)} should match the FC data (~9%)`);
-  assert.equal(counts.ss || 0, 0, 'eephus share rounds to zero in the Statcast table');
+  const ssShare = (counts.ss || 0) / N;
+  assert.ok(ssShare > 0.003 && ssShare < 0.02, `Lv4 0-0 eephus share ${ssShare.toFixed(3)} should be the game-added ~1%`);
   // Lv1 is uniform across all eight types now
   const lv1 = {};
   for (let i = 0; i < N; i++) {

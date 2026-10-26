@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.4.0';
+  const currentVersion = '1.4.1';
   const updates = [
+    {
+      version: '1.4.1',
+      title: 'CPUが超スローボールを投げるように',
+      changes: [
+        'CPUの配球に超スローボールを追加しました（全カウントで1%）。実データではほとんど投げられない球種ですが、ゲーム用にたまに出てくるようにしています。'
+      ]
+    },
     {
       version: '1.4.0',
       title: '新球種「カットボール」「超スローボール」を追加',
