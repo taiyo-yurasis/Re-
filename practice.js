@@ -16,6 +16,32 @@ function pracPitch(){
  if(c==='in')x=110-sgn*rnd(26,60);else if(c==='out')x=110+sgn*rnd(26,60);else if(c==='mid')x=110+rnd(-20,20);else x=rnd(60,160);
  return{t,x,y}}
 
+// 打球を試合と同じ見た目でフィールドに飛ばす (判定は変えず、着地点の計算だけ試合側と揃える)。
+// 飛ばした場合は flight の完了後に次の球へ進むので true を返す
+function pracFlight(k,info,ms){
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):cl(cl((ms||0)*.3,-38,38)+rnd(-9,9),-42,42))*P/180;
+ const done=()=>later(350,ready);
+ if(k==='gr'){
+  const d=rnd(70,130);
+  flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',done,1);
+  return true;
+ }
+ if(k==='fly'){
+  const d=flyDistPx(info);
+  flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'fly',done,1);
+  return true;
+ }
+ if(k==='1B'||k==='2B'||k==='3B'||k==='HR'){
+  const edge=(k==='2B'||k==='3B')&&Math.abs(a)>=36*P/180;
+  const wall=(k==='2B'||k==='3B')&&!edge;
+  const ground=edge||(k==='1B'&&Math.random()<.5);
+  const d=wall?R-8:(k==='1B'?rnd(190,230):k==='2B'?rnd(235,290):k==='3B'?rnd(295,312):rnd(345,380));
+  flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},k==='HR'?'hr':ground?'ground':'fly',done,0,wall?{wall:true}:null);
+  return true;
+ }
+ return false;
+}
+
 // result() から呼ばれる。アウト・カウント・走者は動かさず、集計と表示だけ行う
 function pracResult(k,ms,info){
  const S=G.prac,p=G.pitch,L=CONFIG.tierLabels;S.n++;
@@ -40,7 +66,9 @@ function pracResult(k,ms,info){
  if(k==='ball')S.ball++;else if(k==='look')S.look++;else if(k==='miss')S.miss++;else if(k==='foul')S.foul++;else{S.play++;S.res[k]++}
  // 見逃し(msがnull/undefined)では直前の打撃詳細を維持する。
  if(ms!=null){const detail=$('hint');if(detail)detail.textContent=`${PR_RL[k]||k} ｜ ${parts.join(' / ')}`;}
- banner(PR_RL[k]||k);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[k]||k}`);updateHud();later(500,ready)}
+ banner(PR_RL[k]||k);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[k]||k}`);updateHud();
+ // インプレーの打球はフィールドを飛ばしてから次の球へ。それ以外は従来通り少し待つ
+ if(!(ms!=null&&pracFlight(k,info,ms)))later(500,ready)}
 
 function pracHud(){
  const S=G.prac,sb=$('prac-stats');sb.style.display='table';document.querySelector('.hd').style.display='none';sb.replaceChildren();
