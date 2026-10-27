@@ -158,17 +158,33 @@ function swing(){
 
 function cpuNormalError(sd){const u=Math.max(1e-9,Math.random()),v=Math.random();return sd*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 
+// CPU打者の読み: 人間投手の球種・コースの偏りを数え、よく投げる球ほど誤差を小さく
+// (待ち構える)、珍しい球ほど大きくする (意表を突かれる)。係数は誤差への倍率。
+function cpuBatRead(p){
+ const level=cl(Number(cfgCpuDifficulty)||2,1,4),D=CPU_DIFFICULTY[level]||CPU_DIFFICULTY[2],rate=D.learnRate||0;
+ const L=G.learn&&G.learn.pit;
+ if(!rate||!L||L.n<10)return{timing:1,pos:1,chase:1};
+ const tShare=(L.byType[p.type]||0)/L.n,cn=courseNOf(p),area=cn<-1/3?'in':cn>1/3?'out':'mid',aShare=(L.byArea[area]||0)/L.n;
+ return{
+  timing:cl(1-rate*((tShare-1/8)*1.1+(aShare-1/3)*.55),.62,1.3),
+  pos:cl(1-rate*((tShare-1/8)*.7+(aShare-1/3)*.35),.7,1.2),
+  chase:cl(1-rate*(tShare-1/8)*.9,.75,1.25)
+ };
+}
+
 // CPUもプレイヤーと同じ batResult() を使い、難易度は操作誤差と見極めで調整する。
 function cpuBat(){
  const p=G.pitch;if(!p)return;
  const level=cl(Number(cfgCpuDifficulty)||2,1,4),D=CPU_DIFFICULTY[level]||CPU_DIFFICULTY[2],d=dist(p),rep=p.type===G.last;G.last=p.type;
+ const read=cpuBatRead(p);
  let sw=d===0?D.swingZone:d===1?D.swingEdge:D.swingOutside;
+ if(d>=1)sw*=read.chase; // 読めている球種はボール球・際どい球を振りにいかない
  if(G.cnt.s===2)sw+=.15;
  if(Math.random()>=cl(sw,0,.98))return take();
  const typeFactor=p.type==='c'||p.type==='cu'?1.12:p.type==='f'?1.08:1;
  // 物理モデルではコース別の理想タイミングを中心にブレる(人間側の評価基準と揃える)
- const ms=cpuNormalError(D.timingError*typeFactor*(rep?.88:1))+(CONFIG.batMode==='physics'?CONFIG.courseIdealMs*courseNOf(p):0);
- const [x,y]=bp(p,1),curX=cl(x+cpuNormalError(D.positionError),0,220),curY=cl(y+cpuNormalError(D.positionError),0,220);
+ const ms=cpuNormalError(D.timingError*typeFactor*(rep?.88:1)*read.timing)+(CONFIG.batMode==='physics'?CONFIG.courseIdealMs*courseNOf(p):0);
+ const [x,y]=bp(p,1),curX=cl(x+cpuNormalError(D.positionError*read.pos),0,220),curY=cl(y+cpuNormalError(D.positionError*read.pos),0,220);
  G.swingT=performance.now();
  const r=batResult(p,ms,curX,curY);
  result(r.k,ms,r);
