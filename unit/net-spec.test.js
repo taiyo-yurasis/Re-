@@ -109,6 +109,62 @@ test('applySnap: ignored on the host client', () => {
   assert.equal(vm.runInContext('G.inn', context), 1);
 });
 
+function updateContext() {
+  const context = {
+    document: makeDocument(),
+    setTimeout: () => { context.__timerCount++; return 1; },
+    clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+    performance: { now: () => 0 },
+    __timerCount: 0, __resultCalls: []
+  };
+  vm.createContext(context);
+  for (const file of ['config.js', 'core.js', 'pitching.js', 'game.js', 'net.js']) {
+    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
+  }
+  vm.runInContext(`
+    banner = () => {};
+    updateHud = () => {};
+    setMsg = () => {};
+    result = (k) => { __resultCalls.push(k) };
+  `, context);
+  return context;
+}
+
+function stalePitchScenario(net, extra) {
+  const context = updateContext();
+  vm.runInContext(`
+    G.net = ${net}; G.phase = 'pitch'; G.top = true; G.cnt = { b: 2, s: 1 };
+    G.pitch = { id: 1, type: 's', x: 110, y: 110, dur: 900, t0: 0, sg: 1 };
+    ${extra}
+  `, context);
+  context.update(5000); // 到達時刻を大きく過ぎた古い投球
+  return context;
+}
+
+test('update: spectator never resolves a pitch locally (snapshots are authoritative)', () => {
+  const context = stalePitchScenario("'spec'", 'G.pvp = true; G.me = undefined;');
+  assert.equal(vm.runInContext('G.phase', context), 'pitch');
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('G.cnt', context))), { b: 2, s: 1 });
+  assert.equal(context.__resultCalls.length, 0);
+  assert.equal(context.__timerCount, 0);
+  // ボール描画用の進行度は return より前に更新される
+  assert.ok(vm.runInContext('G.pitch.t', context) > 5);
+});
+
+test('update: guest never resolves a pitch locally either', () => {
+  const context = stalePitchScenario("'guest'", 'G.pvp = true; G.me = 1;');
+  assert.equal(vm.runInContext('G.phase', context), 'pitch');
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('G.cnt', context))), { b: 2, s: 1 });
+  assert.equal(context.__resultCalls.length, 0);
+  assert.equal(context.__timerCount, 0);
+});
+
+test('update: local CPU game still takes a timed-out pitch', () => {
+  const context = stalePitchScenario('null', 'G.pvp = false; G.humanTeam = 0;');
+  assert.equal(vm.runInContext('G.phase', context), 'busy');
+  assert.deepEqual(context.__resultCalls, ['look']); // 真ん中の見逃しとして take() が走る
+});
+
 test('joinRoom: presence roles drive spectator count and player-leave detection', async () => {
   const context = netContext();
   const ch = context.__channel;
