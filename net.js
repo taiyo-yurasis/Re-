@@ -1,5 +1,9 @@
 /* net.js — オンライン対戦(Supabase Realtime) */
 let RM=null,gb=0,hostN=3,SB=null,roomCode=null,helloTimer=null,helloTimeout=null,waitingRoom=false,roomEpoch=0;
+let myRole=null,specCount=0,specTimeout=null,specSawHost=false;
+// 対戦者 (ホストとゲスト) が両方揃っていた状態からどちらか欠けたら切断とみなす。観戦者の出入りでは判定しない
+const playersGone=(roles,sawPlayers)=>!!sawPlayers&&!(roles.includes('host')&&roles.includes('guest'));
+function setOvBtns(dis){document.querySelectorAll('#ov [data-n],#jn,#sp').forEach(b=>b.disabled=dis)}
 const pendingJoins=new Set(),pendingJoinCancels=new Set();
 const ROOM_JOIN_TIMEOUT_MS=10000,HOST_HANDSHAKE_TIMEOUT_MS=15000;
 function sbRoom(){if(!SB&&window.supabase&&!SUPA_URL.includes('YOUR-')&&!SUPA_KEY.includes('YOUR-'))SB=supabase.createClient(SUPA_URL,SUPA_KEY,{realtime:{params:{eventsPerSecond:15}}});return SB?{join:joinRoom}:null}
@@ -7,14 +11,15 @@ function closeRoom(){
  roomEpoch++;
  if(helloTimer){clearInterval(helloTimer);helloTimer=null}
  if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}
- const old=RM;RM=null;roomCode=null;waitingRoom=false;
+ if(specTimeout){clearTimeout(specTimeout);specTimeout=null}
+ const old=RM;RM=null;roomCode=null;waitingRoom=false;myRole=null;specCount=0;specSawHost=false;
  if(old&&old.close)old.close();
  pendingJoinCancels.forEach(cancel=>cancel());pendingJoinCancels.clear();
  pendingJoins.forEach(ch=>{try{SB.removeChannel(ch)}catch(e){console.warn('Pending channel cleanup failed',e)}});pendingJoins.clear();
 }
 function joinRoom(name){return new Promise((res,rej)=>{
  let settled=false;
- const ch=SB.channel(name,{config:{broadcast:{self:false},presence:{key:Math.random().toString(36).slice(2)}}}),hs={},leaveHandlers=[];
+ const ch=SB.channel(name,{config:{broadcast:{self:false},presence:{key:Math.random().toString(36).slice(2)}}}),hs={},leaveHandlers=[],presenceHandlers=[];let sawPlayers=false;
  pendingJoins.add(ch);
  const cleanup=()=>{pendingJoins.delete(ch);try{SB.removeChannel(ch)}catch(e){console.warn('Realtime channel cleanup failed',e)}};
  let cancelJoin;
@@ -26,14 +31,17 @@ function joinRoom(name){return new Promise((res,rej)=>{
  const joinTimer=setTimeout(()=>finish(new Error('JOIN_TIMEOUT')),ROOM_JOIN_TIMEOUT_MS);
  cancelJoin=()=>finish(new Error('CANCELLED'));pendingJoinCancels.add(cancelJoin);
  ['snap','throw','swing','hello'].forEach(ev=>ch.on('broadcast',{event:ev},m=>hs[ev]&&hs[ev]({isMe:false,data:m.payload})));
- ch.on('presence',{event:'leave'},()=>{if(Object.keys(ch.presenceState()).length<=1)leaveHandlers.forEach(fn=>fn())});
+ const rolesNow=()=>{const out=[];Object.values(ch.presenceState()).forEach(a=>a.forEach(p=>{if(p&&p.role)out.push(p.role)}));return out};
+ const presenceUpdate=()=>{const roles=rolesNow();if(roles.includes('host')&&roles.includes('guest'))sawPlayers=true;presenceHandlers.forEach(fn=>fn(roles));return roles};
+ ch.on('presence',{event:'sync'},presenceUpdate);
+ ch.on('presence',{event:'leave'},()=>{if(playersGone(presenceUpdate(),sawPlayers))leaveHandlers.forEach(fn=>fn())});
  ch.subscribe(async st=>{
   if(settled)return;
   if(st==='SUBSCRIBED'){
    try{
-    await ch.track({online:true});
+    await ch.track({online:true,role:myRole||'guest'});
     if(settled){try{ch.untrack()}catch(e){};return}
-    finish(null,{emit:(t,d)=>ch.send({type:'broadcast',event:t,payload:d}),on:(t,fn)=>{hs[t]=fn},onLeave:fn=>leaveHandlers.push(fn),close:()=>{try{ch.untrack()}finally{SB.removeChannel(ch)}}});
+    finish(null,{emit:(t,d)=>ch.send({type:'broadcast',event:t,payload:d}),on:(t,fn)=>{hs[t]=fn},onLeave:fn=>leaveHandlers.push(fn),onPresence:fn=>presenceHandlers.push(fn),close:()=>{try{ch.untrack()}finally{SB.removeChannel(ch)}}});
    }catch(e){finish(e)}
   }else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT')finish(new Error(st))
  });
@@ -92,8 +100,8 @@ function validSnap(s){
  return true
 }
 function applySnap(s){
- if(G.net!=='guest'||!validSnap(s))return;
- if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;if(helloTimer){clearInterval(helloTimer);helloTimer=null}if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ov').style.display='none';if(Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
+ if(!(G.net==='guest'||G.net==='spec')||!validSnap(s))return;
+ if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;if(helloTimer){clearInterval(helloTimer);helloTimer=null}if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}if(specTimeout){clearTimeout(specTimeout);specTimeout=null}$('cancel-room').style.display='none';setOvBtns(false);$('ov').style.display='none';if(G.net==='guest'&&Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
  Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),pts:Array.isArray(s.pts)?s.pts.map(Number):[0,0],walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
@@ -113,8 +121,21 @@ function remoteSwing(m){
  p.t=cl(m.t,0,1.3);G.phase='busy';G.swingT=performance.now();
  const ms=(p.t-1)*p.dur,r=batResult(p,ms,cl(m.x,0,220),cl(m.y,0,220));result(r.k,ms,r)
 }
+function endSpec(){
+ if(G.net!=='spec')return;
+ closeRoom();G.net=null;G.me=undefined;
+ $('cancel-room').style.display='none';setOvBtns(false);
+ $('ov').style.display='flex';$('ovt').textContent='対戦が終了しました';$('ovs').textContent='ホストとの接続が切れたため、観戦を終了しました。';
+}
 function netStart(rm){
  RM=rm;
+ rm.onPresence(roles=>{
+  const n=roles.filter(r=>r==='spec').length;if(n!==specCount){specCount=n;updateHud()}
+  if(G.net==='spec'){
+   if(roles.includes('host')){specSawHost=true;if(specTimeout){clearTimeout(specTimeout);specTimeout=null}}
+   else if(specSawHost)endSpec();
+  }
+ });
  rm.on('snap',m=>{if(!m.isMe)applySnap(m.data)});
  rm.on('throw',m=>{const d=m.data;if(!m.isMe&&G.net==='host'&&G.phase==='aim'&&!canPit()&&d&&
   typeof d.type==='string'&&Object.hasOwn(TY,d.type)&&Number.isFinite(d.x)&&d.x>=0&&d.x<=220&&Number.isFinite(d.y)&&d.y>=0&&d.y<=220){
@@ -122,37 +143,52 @@ function netStart(rm){
  }});
  rm.on('swing',m=>{if(!m.isMe&&G.net==='host'&&!canBat())remoteSwing(m.data)});
  rm.on('hello',m=>{const d=m.data;if(!m.isMe&&G.net==='hosting'&&d&&d.room===roomCode){
-  $('ov').style.display='none';waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);const team=Math.random()<.5?0:1;
+  $('ov').style.display='none';waitingRoom=false;$('cancel-room').style.display='none';setOvBtns(false);const team=Math.random()<.5?0:1;
   const gph=d.ph===-1?-1:1,gbs=['right','left','random'].includes(d.bs)?d.bs:'right',cfgs=[null,null];
   cfgs[team]={ph:cfgPitcher,bs:cfgBatter};cfgs[1-team]={ph:gph,bs:gbs};
   newGame(hostN,true,team,cfgs);G.net='host';G.me=team;G.seq=0;G.gid=Math.random();startHalf();
  }});
- rm.onLeave(()=>{if(G.net==='host'||G.net==='guest'){closeRoom();G.net=null;$('ov').style.display='flex';$('ovt').textContent='対戦相手が切断しました';$('ovs').textContent='部屋を閉じました。もう一度対戦するには新しい部屋を作ってね。';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false)}});
+ rm.onLeave(()=>{if(G.net==='host'||G.net==='guest'){closeRoom();G.net=null;$('ov').style.display='flex';$('ovt').textContent='対戦相手が切断しました';$('ovs').textContent='部屋を閉じました。もう一度対戦するには新しい部屋を作ってね。';setOvBtns(false)}});
+ rm.onLeave(()=>endSpec());
 }
 async function hostRoom(N){
  if(waitingRoom)return;closeRoom();
  $('ov').style.display='flex';const room=sbRoom();
  if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
- const code=Math.random().toString(36).substring(2,8).toUpperCase();let rm;const epoch=roomEpoch;waitingRoom=true;document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block';
- try{rm=await room.join('yk'+code)}catch(e){if(epoch!==roomEpoch)return;waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovs').textContent=e.message==='JOIN_TIMEOUT'?'部屋への接続がタイムアウトしました。もう一度試してね':'部屋を作れなかった。もう一度試してね';return}
+ const code=Math.random().toString(36).substring(2,8).toUpperCase();let rm;const epoch=roomEpoch;waitingRoom=true;myRole='host';setOvBtns(true);$('cancel-room').style.display='inline-block';
+ try{rm=await room.join('yk'+code)}catch(e){if(epoch!==roomEpoch)return;waitingRoom=false;$('cancel-room').style.display='none';setOvBtns(false);$('ovs').textContent=e.message==='JOIN_TIMEOUT'?'部屋への接続がタイムアウトしました。もう一度試してね':'部屋を作れなかった。もう一度試してね';return}
  if(epoch!==roomEpoch){rm.close();return}hostN=N;roomCode=code;waitingRoom=true;G.net='hosting';netStart(rm);$('ovt').textContent='合言葉 '+code;$('ovs').textContent='相手にこの6桁を伝えて。入ってくるのを待ってるよ…';
- document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
+ setOvBtns(true);$('cancel-room').style.display='inline-block'
 }
 $('jn').onclick=async()=>{
  if(waitingRoom)return;
  const c=$('code').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(c)){$('ovs').textContent='合言葉を6桁で入れてね';return}
  closeRoom();const room=sbRoom();if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
- waitingRoom=true;const epoch=roomEpoch;document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block';
- let rm;try{rm=await room.join('yk'+c)}catch(e){if(epoch!==roomEpoch)return;waitingRoom=false;$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovs').textContent=e.message==='JOIN_TIMEOUT'?'部屋への接続がタイムアウトしました。もう一度試してね':'部屋に入れなかった…(招待や権限を確認してね)';return}
+ myRole='guest';waitingRoom=true;const epoch=roomEpoch;setOvBtns(true);$('cancel-room').style.display='inline-block';
+ let rm;try{rm=await room.join('yk'+c)}catch(e){if(epoch!==roomEpoch)return;waitingRoom=false;$('cancel-room').style.display='none';setOvBtns(false);$('ovs').textContent=e.message==='JOIN_TIMEOUT'?'部屋への接続がタイムアウトしました。もう一度試してね':'部屋に入れなかった…(招待や権限を確認してね)';return}
  if(epoch!==roomEpoch){rm.close();return}roomCode=c;newGame(3,true);G.net='guest';G.me=1;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovs').textContent='ホストを待ってる…';
  helloTimer=setInterval(()=>{if(G.gid||G.net!=='guest'){clearInterval(helloTimer);helloTimer=null}else send('hello',{room:c,ph:cfgPitcher,bs:cfgBatter})},1000);
  helloTimeout=setTimeout(()=>{
   if(G.net!=='guest'||G.gid)return;
   closeRoom();G.net=null;G.me=undefined;
-  $('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);
+  $('cancel-room').style.display='none';setOvBtns(false);
   $('ovt').textContent='ホストから応答がありません';$('ovs').textContent='ホストがまだ接続していないか、通信に失敗した可能性があります。合言葉を確認して再試行してください。';
  },HOST_HANDSHAKE_TIMEOUT_MS);
  send('hello',{room:c,ph:cfgPitcher,bs:cfgBatter});
- document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=true);$('cancel-room').style.display='inline-block'
+ setOvBtns(true);$('cancel-room').style.display='inline-block'
 };
-$('cancel-room').onclick=()=>{closeRoom();G.net=null;G.me=undefined;hostN=1;$('code').value='';$('cancel-room').style.display='none';document.querySelectorAll('#ov [data-n],#jn').forEach(b=>b.disabled=false);$('ovt').textContent='⚾ 野球盤 STADIUM';$('ovs').innerHTML='打撃: 画面をドラッグしてカーソルを合わせ、<b>指を離した瞬間</b>にスイング!<br>投球: 球種を選び、カーソルで狙って「投げる!」。';$('ov').style.display='flex'};
+$('sp').onclick=async()=>{
+ if(waitingRoom)return;
+ const c=$('code').value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(c)){$('ovs').textContent='合言葉を6桁で入れてね';return}
+ closeRoom();const room=sbRoom();if(!room){$('ovs').textContent='Supabaseの設定が未入力か、読み込めなかった…(index.htmlの設定を確認)';return}
+ myRole='spec';waitingRoom=true;const epoch=roomEpoch;setOvBtns(true);$('cancel-room').style.display='inline-block';
+ let rm;try{rm=await room.join('yk'+c)}catch(e){if(epoch!==roomEpoch)return;waitingRoom=false;$('cancel-room').style.display='none';setOvBtns(false);$('ovs').textContent=e.message==='JOIN_TIMEOUT'?'部屋への接続がタイムアウトしました。もう一度試してね':'部屋に入れなかった…(招待や権限を確認してね)';return}
+ if(epoch!==roomEpoch){rm.close();return}roomCode=c;newGame(3,true);G.net='spec';G.me=undefined;G.seq=0;G.gid=null;netStart(rm);waitingRoom=true;$('ovt').textContent='👁 観戦モード';$('ovs').textContent='試合に接続しています…（まだ始まっていない場合は、開始されるまでこのまま待機します）';
+ specTimeout=setTimeout(()=>{
+  if(G.net!=='spec'||G.gid)return;
+  closeRoom();G.net=null;G.me=undefined;
+  $('cancel-room').style.display='none';setOvBtns(false);
+  $('ovt').textContent='試合が見つかりません';$('ovs').textContent='合言葉が違うか、部屋がまだ作られていないようです。確認して再試行してください。';
+ },HOST_HANDSHAKE_TIMEOUT_MS);
+};
+$('cancel-room').onclick=()=>{closeRoom();G.net=null;G.me=undefined;hostN=1;$('code').value='';$('cancel-room').style.display='none';setOvBtns(false);$('ovt').textContent='⚾ 野球盤 STADIUM';$('ovs').innerHTML='打撃: 画面をドラッグしてカーソルを合わせ、<b>指を離した瞬間</b>にスイング!<br>投球: 球種を選び、カーソルで狙って「投げる!」。';$('ov').style.display='flex'};

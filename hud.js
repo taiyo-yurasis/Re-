@@ -22,6 +22,6 @@ function updateHud(){
  const handStr=G.pitcherHands&&G.pitcherHands[defTeam]===1?'右投':'左投';
  const curBatterSide=G.batterSides?(G.batterSides[battingTeam]==='right'?'右打':'左打'):'右打';
  const humanBatting=G.net?batHuman():(!G.pvp&&battingTeam===G.humanTeam);
- $('st').textContent=`${G.inn}回${G.top?'表':'裏'} (${handStr} / ${curBatterSide})  ${G.pvp?(G.top?'🏏 P1攻撃 / P2投手':'🏏 P2攻撃 / P1投手')+(G.net?(G.me===0?' [あなた=P1]':' [あなた=P2]'):''):humanBatting?'🏏 あなたの攻撃':'⚾ あなたの守備'}`;
+ $('st').textContent=`${G.inn}回${G.top?'表':'裏'} (${handStr} / ${curBatterSide})  ${G.pvp?(G.top?'🏏 P1攻撃 / P2投手':'🏏 P2攻撃 / P1投手')+(G.net?(G.net==='spec'?' [観戦中]':G.me===0?' [あなた=P1]':' [あなた=P2]'):''):humanBatting?'🏏 あなたの攻撃':'⚾ あなたの守備'}${(G.net==='host'||G.net==='guest'||G.net==='spec')&&roomCode?` ｜ 合言葉 ${roomCode}${specCount>0?` 👁観戦${specCount}人`:''}`:''}`;
  document.querySelectorAll('.pt').forEach(b=>b.classList.toggle('on',b.dataset.t===G.sel));sync();
 }
