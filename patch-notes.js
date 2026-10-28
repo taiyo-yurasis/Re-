@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.6.2';
+  const currentVersion = '1.6.3';
   const updates = [
+    {
+      version: '1.6.3',
+      title: 'フィールドが表示されないことがある問題を修正',
+      changes: [
+        'タブを切り替えたあとなどに、フィールドの芝や土が表示されなくなることがある問題を修正しました。'
+      ]
+    },
     {
       version: '1.6.2',
       title: '観戦中の表示の乱れを修正',
