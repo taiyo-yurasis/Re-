@@ -109,6 +109,39 @@ function drawTh(now){const t=G.th;
   if(pos)dot(pos[0],pos[1],4,'#fff','#c33')}
  else{const p=(now-t.t0)/t.dur;if(p>=0&&p<1){const x=t.from.x+(t.to.x-t.from.x)*p,y=t.from.y+(t.to.y-t.from.y)*p-Math.sin(p*P)*14;dot(x,y,4,'#fff','#c33')}}}
 
+// 観戦者用: カーソルサンプル列を 150ms 遅れで線形補間し、少ない更新頻度でも滑らかに見せる
+function specCursorAt(team,now){
+ const arr=curSamples[team];if(!arr||!arr.length)return null;
+ const target=now-150;
+ if(target<=arr[0].t)return arr[0];
+ for(let i=1;i<arr.length;i++){
+  if(arr[i].t>=target){const a=arr[i-1],b=arr[i],k=(target-a.t)/Math.max(1,b.t-a.t);return{x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k,type:b.type}}
+ }
+ return arr[arr.length-1];
+}
+function drawSpecCursors(c){
+ const now=performance.now(),batTeam=G.top?0:1,pitTeam=1-batTeam;
+ if(G.phase==='aim'){
+  const pc=specCursorAt(pitTeam,now);
+  if(pc){
+   const preview={type:pc.type||'s',x:pc.x,y:pc.y,sg:G.pitcherHands?G.pitcherHands[pitTeam]:1},[ex,ey]=bp(preview,1);
+   c.save();c.beginPath();for(let i=0;i<=24;i++){const[x,y]=bp(preview,i/24);if(i===0)c.moveTo(x,y);else c.lineTo(x,y)}c.setLineDash([4,4]);c.strokeStyle='rgba(255,176,66,.8)';c.lineWidth=2;c.stroke();c.setLineDash([]);
+   c.beginPath();c.arc(ex,ey,4,0,7);c.fillStyle='rgba(255,176,66,.9)';c.fill();c.restore();
+   const j=(TY[preview.type]||TY.s).j;
+   c.strokeStyle='#ffb042';c.lineWidth=2;c.beginPath();c.arc(ex,ey,j,0,7);c.stroke();
+   c.fillStyle='#ffb042';c.font='10px sans-serif';c.fillText('投',ex+j+2,ey+3);
+  }
+ }
+ if(G.phase==='aim'||G.phase==='pitch'||G.phase==='busy'){
+  const bc=specCursorAt(batTeam,now);
+  if(bc){
+   const rr=CONFIG.cursorSize;
+   c.strokeStyle='#5ef0ff';c.lineWidth=2;c.beginPath();c.arc(bc.x,bc.y,rr,0,7);c.stroke();
+   c.beginPath();c.moveTo(bc.x-rr-6,bc.y);c.lineTo(bc.x+rr+6,bc.y);c.moveTo(bc.x,bc.y-rr-6);c.lineTo(bc.x,bc.y+rr+6);c.stroke();
+   c.fillStyle='#5ef0ff';c.font='10px sans-serif';c.fillText('打',bc.x+rr+2,bc.y+3);
+  }
+ }
+}
 function drawZone(){const u=44,c=zx;
  c.fillStyle='#0f1a33';c.fillRect(0,0,220,220);
  c.strokeStyle='#1f2f58';c.lineWidth=1;
@@ -120,6 +153,7 @@ function drawZone(){const u=44,c=zx;
   c.strokeStyle='rgba(255,210,63,.6)';c.lineWidth=2;c.beginPath();c.arc(x,y,19,0,7);c.stroke();
   baseball(c,x,y,r,spinState(p,t))}
  
+ if(G.net==='spec'){drawSpecCursors(c);return}
  const aimM=G.phase==='aim'&&canPit(),rr=aimM?TY[G.sel].j:CONFIG.cursorSize;let q=G.cur;
  if(aimM){const preview=pitchTarget(),[ex,ey]=bp(preview,1);q={x:ex,y:ey};c.save();c.beginPath();for(let i=0;i<=24;i++){const[x,y]=bp(preview,i/24);if(i===0)c.moveTo(x,y);else c.lineTo(x,y)}c.setLineDash([4,4]);c.strokeStyle='rgba(94,240,255,.75)';c.lineWidth=2;c.stroke();c.setLineDash([]);c.beginPath();c.arc(ex,ey,4,0,7);c.fillStyle='rgba(94,240,255,.85)';c.fill();c.restore()}
  if(!aimM&&!(canBat()&&G.phase!=='idle'&&G.phase!=='over'&&G.phase!=='sent'))return;

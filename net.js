@@ -1,6 +1,8 @@
 /* net.js — オンライン対戦(Supabase Realtime) */
 let RM=null,gb=0,hostN=3,SB=null,roomCode=null,helloTimer=null,helloTimeout=null,waitingRoom=false,roomEpoch=0;
 let myRole=null,specCount=0,specTimeout=null,specSawHost=false;
+let guestCur=null; // ホストが中継するゲストの最新カーソル {x,y,type,at}
+const curSamples={0:[],1:[]}; // 観戦者用: チーム別のカーソルサンプル列 (補間描画に使う)
 // 対戦者 (ホストとゲスト) が両方揃っていた状態からどちらか欠けたら切断とみなす。観戦者の出入りでは判定しない
 const playersGone=(roles,sawPlayers)=>!!sawPlayers&&!(roles.includes('host')&&roles.includes('guest'));
 function setOvBtns(dis){document.querySelectorAll('#ov [data-n],#jn,#sp').forEach(b=>b.disabled=dis)}
@@ -12,7 +14,7 @@ function closeRoom(){
  if(helloTimer){clearInterval(helloTimer);helloTimer=null}
  if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}
  if(specTimeout){clearTimeout(specTimeout);specTimeout=null}
- const old=RM;RM=null;roomCode=null;waitingRoom=false;myRole=null;specCount=0;specSawHost=false;
+ const old=RM;RM=null;roomCode=null;waitingRoom=false;myRole=null;specCount=0;specSawHost=false;guestCur=null;curSamples[0].length=0;curSamples[1].length=0;
  if(old&&old.close)old.close();
  pendingJoinCancels.forEach(cancel=>cancel());pendingJoinCancels.clear();
  pendingJoins.forEach(ch=>{try{SB.removeChannel(ch)}catch(e){console.warn('Pending channel cleanup failed',e)}});pendingJoins.clear();
@@ -30,7 +32,7 @@ function joinRoom(name){return new Promise((res,rej)=>{
  };
  const joinTimer=setTimeout(()=>finish(new Error('JOIN_TIMEOUT')),ROOM_JOIN_TIMEOUT_MS);
  cancelJoin=()=>finish(new Error('CANCELLED'));pendingJoinCancels.add(cancelJoin);
- ['snap','throw','swing','hello'].forEach(ev=>ch.on('broadcast',{event:ev},m=>hs[ev]&&hs[ev]({isMe:false,data:m.payload})));
+ ['snap','throw','swing','hello','cur'].forEach(ev=>ch.on('broadcast',{event:ev},m=>hs[ev]&&hs[ev]({isMe:false,data:m.payload})));
  const rolesNow=()=>{const out=[];Object.values(ch.presenceState()).forEach(a=>a.forEach(p=>{if(p&&p.role)out.push(p.role)}));return out};
  const presenceUpdate=()=>{const roles=rolesNow();if(roles.includes('host')&&roles.includes('guest'))sawPlayers=true;presenceHandlers.forEach(fn=>fn(roles));return roles};
  ch.on('presence',{event:'sync'},presenceUpdate);
@@ -48,9 +50,26 @@ function joinRoom(name){return new Promise((res,rej)=>{
 })}
 const send=(t,d)=>{if(RM)RM.emit(t,d).catch(()=>{})};
 const canBat=()=>G.net?(G.top?0:1)===G.me:batHuman(),canPit=()=>G.net?(G.top?1:0)===G.me:pitHuman();
+// 観戦者向けに両プレイヤーのカーソルをスナップショットへ載せる (ホスト分は自分、ゲスト分は中継)
+function snapCur(n){
+ const out={};
+ if(G.cur)out[G.me]={x:G.cur.x,y:G.cur.y,type:G.sel};
+ if(guestCur&&n-guestCur.at<1500)out[1-G.me]={x:guestCur.x,y:guestCur.y,type:guestCur.type};
+ return Object.keys(out).length?out:null;
+}
+// ゲストは自分のカーソルをホストへ送る (動いたときだけ、100ms間引き)。ホストが snap に中継する
+let lastCurSent=null;
+function curTick(){
+ if(G.net!=='guest'||!G.cur)return;
+ if(G.phase!=='aim'&&G.phase!=='pitch'){lastCurSent=null;return}
+ const cur={x:G.cur.x,y:G.cur.y,type:G.sel};
+ if(lastCurSent&&Math.hypot(cur.x-lastCurSent.x,cur.y-lastCurSent.y)<2&&cur.type===lastCurSent.type)return;
+ lastCurSent=cur;send('cur',cur);
+}
+setInterval(curTick,100);
 function snap(){
  const n=performance.now(),p=G.pitch,f=G.fl;
- return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves}}
+ return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves},cur:snapCur(n)}
 }
 let lastSync=0;const sync=()=>{const n=performance.now();if(G.net==='host'&&G.gid&&n-lastSync>110){lastSync=n;send('snap',snap())}};
 setInterval(sync,200);
@@ -97,11 +116,14 @@ function validSnap(s){
  if(s.rl!=null&&(!s.rl||typeof s.rl!=='object'||!intRange(s.rl.id,0,Number.MAX_SAFE_INTEGER)||!age(s.rl.age)||
   !Array.isArray(s.rl.moves)||s.rl.moves.length>4||s.rl.moves.some(m=>!m||!intRange(m.i,0,FD.length-1)||
    !numRange(m.T,0.001,3600000)||!numRange(m.x,0,480)||!numRange(m.y,0,400))))return false;
+ if(s.cur!=null&&(!s.cur||typeof s.cur!=='object'||Object.keys(s.cur).some(k=>!['0','1'].includes(k)||
+  !s.cur[k]||typeof s.cur[k]!=='object'||!numRange(s.cur[k].x,0,220)||!numRange(s.cur[k].y,0,220)||
+  (s.cur[k].type!=null&&!Object.hasOwn(TY,s.cur[k].type)))))return false;
  return true
 }
 function applySnap(s){
  if(!(G.net==='guest'||G.net==='spec')||!validSnap(s))return;
- if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;if(helloTimer){clearInterval(helloTimer);helloTimer=null}if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}if(specTimeout){clearTimeout(specTimeout);specTimeout=null}$('cancel-room').style.display='none';setOvBtns(false);$('ov').style.display='none';if(G.net==='guest'&&Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
+ if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;curSamples[0].length=0;curSamples[1].length=0;if(helloTimer){clearInterval(helloTimer);helloTimer=null}if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}if(specTimeout){clearTimeout(specTimeout);specTimeout=null}$('cancel-room').style.display='none';setOvBtns(false);$('ov').style.display='none';if(G.net==='guest'&&Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
  if(s.seq<=G.seq)return;G.seq=s.seq;const n=performance.now();
  Object.assign(G,{N:Number(s.N),inn:Number(s.inn),top:s.top,outs:Number(s.outs),cnt:{b:Number(s.cnt.b),s:Number(s.cnt.s)},bases:s.bases.map(Number),runs:s.runs.map(a=>a.map(v=>v==null?null:Number(v))),hits:s.hits.map(Number),pts:Array.isArray(s.pts)?s.pts.map(Number):[0,0],walkoff:!!s.wo,pitcherHands:s.pitcherHands,batterSides:s.batterSides});
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
@@ -112,6 +134,13 @@ function applySnap(s){
  if(s.th){if(!G.th||G.th.id!==s.th.id)G.th={...s.th,t0:n-s.th.age}}else G.th=null;
  if(s.rl){if(!G.rl||G.rl.id!==s.rl.id)G.rl={...s.rl,t0:n-s.rl.age}}else G.rl=null;
  if(s.bid!==gb){gb=s.bid;if(Array.isArray(s.bt)&&typeof s.bt[0]==='string')banner(s.bt[0].slice(0,100),typeof s.bt[1]==='string'?s.bt[1].slice(0,20):'')}
+ if(G.net==='spec'&&s.cur){
+  for(const k of ['0','1']){
+   const c=s.cur[k];if(!c)continue;
+   const arr=curSamples[k],last=arr[arr.length-1];
+   if(!last||last.x!==c.x||last.y!==c.y||last.type!==c.type){arr.push({x:c.x,y:c.y,type:c.type??null,t:n});if(arr.length>10)arr.splice(0,arr.length-10)}
+  }
+ }
  if(s.sw!=null&&Number.isFinite(s.sw))G.swingT=n-cl(s.sw,0,400);
  $('msg').textContent=typeof s.m==='string'?s.m.slice(0,500):'';updateHud()
 }
@@ -137,6 +166,9 @@ function netStart(rm){
   }
  });
  rm.on('snap',m=>{if(!m.isMe)applySnap(m.data)});
+ rm.on('cur',m=>{const d=m.data;if(!m.isMe&&G.net==='host'&&d&&Number.isFinite(d.x)&&d.x>=0&&d.x<=220&&Number.isFinite(d.y)&&d.y>=0&&d.y<=220){
+  guestCur={x:d.x,y:d.y,type:typeof d.type==='string'&&Object.hasOwn(TY,d.type)?d.type:null,at:performance.now()};
+ }});
  rm.on('throw',m=>{const d=m.data;if(!m.isMe&&G.net==='host'&&G.phase==='aim'&&!canPit()&&d&&
   typeof d.type==='string'&&Object.hasOwn(TY,d.type)&&Number.isFinite(d.x)&&d.x>=0&&d.x<=220&&Number.isFinite(d.y)&&d.y>=0&&d.y<=220){
   throwP(d.type,d.x,d.y,true);

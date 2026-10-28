@@ -165,6 +165,64 @@ test('update: local CPU game still takes a timed-out pitch', () => {
   assert.deepEqual(context.__resultCalls, ['look']); // 真ん中の見逃しとして take() が走る
 });
 
+test('snap: carries the host cursor and a fresh relayed guest cursor for spectators', () => {
+  const context = netContext();
+  vm.runInContext(`
+    G.net = 'host'; G.me = 0; G.gid = 1; G.inn = 1; G.top = true; G.outs = 0;
+    G.cnt = { b: 0, s: 0 }; G.bases = [0, 0, 0, 0]; G.runs = [[0], [0]]; G.hits = [0, 0];
+    G.pts = [0, 0]; G.N = 3; G.phase = 'aim'; G.bid = 0; G.bt = null; G.walkoff = false;
+    G.swingT = 0; G.pitcherHands = [1, 1]; G.batterSides = ['right', 'right'];
+    G.pitch = null; G.fl = null; G.mv = null; G.th = null; G.rl = null;
+    G.cur = { x: 50, y: 60 }; G.sel = 'sl';
+  `, context);
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(context.snap().cur), { '0': { x: 50, y: 60, type: 'sl' } });
+  vm.runInContext("guestCur = { x: 10, y: 20, type: 's', at: 0 };", context); // performance.now() は 0 固定
+  assert.deepEqual(plain(context.snap().cur), { '0': { x: 50, y: 60, type: 'sl' }, '1': { x: 10, y: 20, type: 's' } });
+  vm.runInContext("guestCur = { x: 10, y: 20, type: 's', at: -2000 };", context); // 古いゲストカーソルは載せない
+  assert.deepEqual(plain(context.snap().cur), { '0': { x: 50, y: 60, type: 'sl' } });
+});
+
+test('validSnap: cursor payload is shape-checked', () => {
+  const context = netContext();
+  const ok = { ...validSnap(), cur: { '0': { x: 10, y: 20, type: 's' }, '1': { x: 0, y: 220, type: null } } };
+  assert.equal(context.validSnap(ok), true);
+  assert.equal(context.validSnap({ ...validSnap(), cur: { '0': { x: 999, y: 20, type: 's' } } }), false);
+  assert.equal(context.validSnap({ ...validSnap(), cur: { '1': { x: 10, y: 20, type: 'xx' } } }), false);
+  assert.equal(context.validSnap({ ...validSnap(), cur: { '2': { x: 10, y: 20, type: 's' } } }), false);
+});
+
+test('applySnap: spectator accumulates cursor samples without duplicates', () => {
+  const context = netContext();
+  vm.runInContext("G.net = 'spec'; G.gid = null; G.seq = 0; G.me = undefined;", context);
+  context.applySnap({ ...validSnap(), cur: { '0': { x: 10, y: 10, type: 's' } } });
+  assert.equal(vm.runInContext('curSamples[0].length', context), 1);
+  context.applySnap({ ...validSnap(), seq: 2, cur: { '0': { x: 30, y: 10, type: 's' } } });
+  assert.equal(vm.runInContext('curSamples[0].length', context), 2);
+  context.applySnap({ ...validSnap(), seq: 3, cur: { '0': { x: 30, y: 10, type: 's' } } });
+  assert.equal(vm.runInContext('curSamples[0].length', context), 2);
+});
+
+test('curTick: guest sends its cursor only when it moves', () => {
+  const context = netContext();
+  context.__sent = [];
+  vm.runInContext(`
+    RM = { emit: (t, d) => { __sent.push([t, d]); return Promise.resolve() } };
+    G.net = 'guest'; G.phase = 'aim'; G.cur = { x: 100, y: 100 }; G.sel = 's';
+  `, context);
+  context.curTick();
+  assert.equal(context.__sent.length, 1);
+  assert.equal(context.__sent[0][0], 'cur');
+  context.curTick(); // 動いていなければ送らない
+  assert.equal(context.__sent.length, 1);
+  vm.runInContext('G.cur = { x: 150, y: 100 };', context);
+  context.curTick();
+  assert.equal(context.__sent.length, 2);
+  vm.runInContext("G.phase = 'ready';", context);
+  context.curTick(); // 対象フェーズ外では送らない
+  assert.equal(context.__sent.length, 2);
+});
+
 test('joinRoom: presence roles drive spectator count and player-leave detection', async () => {
   const context = netContext();
   const ch = context.__channel;

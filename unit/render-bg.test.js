@@ -48,7 +48,7 @@ function renderContext() {
     __bgCtx: bgCtx
   };
   vm.createContext(context);
-  for (const file of ['config.js', 'core.js', 'render.js']) {
+  for (const file of ['config.js', 'core.js', 'render.js', 'net.js']) {
     vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8'), context, { filename: file });
   }
   return context;
@@ -72,4 +72,15 @@ test('ensureBg repaints a purged background (iOS Safari drops background-tab can
   context.__bgCtx.__alpha = 0; // キャンバスが破棄されて透明になった状態
   context.ensureBg();
   assert.ok(context.__bgCtx.__fills > before, 'purged background should be repainted');
+});
+
+test('specCursorAt interpolates between samples with a 150ms delay', () => {
+  const context = renderContext();
+  vm.runInContext("curSamples[0].push({ x: 0, y: 100, type: 's', t: 700 }, { x: 100, y: 100, type: 's', t: 900 });", context);
+  const mid = context.specCursorAt(0, 1000); // 描画時刻 850 = 2点の 75% 地点
+  assert.equal(mid.x, 75);
+  assert.equal(mid.y, 100);
+  assert.equal(context.specCursorAt(0, 800).x, 0);   // 最初のサンプルより前は先頭
+  assert.equal(context.specCursorAt(0, 5000).x, 100); // 最後より後は末尾
+  assert.equal(context.specCursorAt(1, 1000), null);  // サンプルが無ければ null
 });
