@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.6.1';
+  const currentVersion = '1.6.2';
   const updates = [
+    {
+      version: '1.6.2',
+      title: '観戦中の表示の乱れを修正',
+      changes: [
+        '観戦中に画面がちらつくことがある問題を修正しました。'
+      ]
+    },
     {
       version: '1.6.1',
       title: 'オンライン観戦モードを追加',
