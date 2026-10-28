@@ -49,7 +49,10 @@ function chooseHitThrowBase(kind){
 }
 
 function pickFielder(to,kind){
- const candidates=kind==='ground'?[2,3,4,5]:[6,7,8,2,3,4,5];
+ // 深いフライは外野手の担当。内野手が外野まで走っていかないよう、落下点が本塁から
+ // 170px以上のフライは外野手だけを候補にする (浅いフライは今まで通り全員候補)
+ const deep=kind!=='ground'&&Math.hypot(to.x-HP.x,to.y-HP.y)>=170;
+ const candidates=kind==='ground'?[2,3,4,5]:deep?[6,7,8]:[6,7,8,2,3,4,5];
  if(kind==='ground'&&Math.hypot(to.x-240,to.y-310)<50)candidates.push(0);
  return nrst(to,candidates);
 }
@@ -189,10 +192,24 @@ function resultGround(ms,info){
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
   if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
   const before=G.bases.slice();
-  const dp=!!before[1]&&G.outs<2&&Math.random()<.35;
+  const loaded=!!(before[1]&&before[2]&&before[3]);
+  // 満塁時のゴロ (アウトになる場合) は3パターンに分岐する:
+  // 1=本塁アウト (全員進塁、満塁のまま) / 2=生還+一塁アウト / 3=本塁→一塁の併殺
+  let homePlay=0;
+  if(loaded){
+   const r2=Math.random();
+   if(G.outs<2&&r2<.2)homePlay=3;
+   else if(r2<(G.outs<2?.6:.5))homePlay=1;
+   else homePlay=2;
+  }
+  const dp=!loaded&&!!before[1]&&G.outs<2&&Math.random()<.35;
   const endsInning=G.outs+1+(dp?1:0)>=3;
   const targets={};
-  for(let b=1;b<=3;b++){
+  if(homePlay===1||homePlay===3){
+   targets[1]=2;targets[2]=3; // 三塁走者は本塁でアウト (目標なし=アウト扱い)
+  }else if(homePlay===2){
+   targets[1]=2;targets[2]=3;targets[3]=G.outs===2?3:4;
+  }else for(let b=1;b<=3;b++){
    if(!before[b])continue;
    if(dp&&b===1)continue;
    if(G.outs===2){targets[b]=b===3?3:b+1;continue}
@@ -205,14 +222,22 @@ function resultGround(ms,info){
   }
   const runnerResult=settle(targets);
   applyRunnerResult(runnerResult);
+  if(homePlay===1)G.bases[1]=1; // 本塁アウトのパターンでは打者走者が一塁に残る
   const r=runnerResult.runs;
   flight(gto,'ground',()=>{
-   G.outs++;let m='ゴロアウト';if(dp){G.outs++;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}
+   let m='ゴロアウト';
+   if(homePlay===1){G.outs++;m='本塁アウト!'}
+   else if(homePlay===3){G.outs+=2;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}
+   else{G.outs++;if(dp){G.outs++;addMatchPts(G.top?1:0,70);m='ダブルプレー!'}}
    score(r);
    banner(m);
    if(r)banner(`+${r}点!`);
    if(G.fl){
-    if(dp){
+    if(homePlay===1){
+     G.th={id:++pid,t0:performance.now(),dur:380,from:G.fl.to,to:HP};
+    }else if(homePlay===3){
+     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:HP,dur:380},{from:HP,to:BS[1],dur:250}],currentStep:0};
+    }else if(dp){
      // 案B(捕球した二遊間が二塁の近くで捕球)では、1段目は送球ではなくボールを持って二塁へ走る
      const self=G.fl.dpSelf,carryDur=self?Math.max(250,Math.hypot(G.fl.to.x-BS[2].x,G.fl.to.y-BS[2].y)/.12):250;
      G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[2],dur:carryDur,...(self?{carry:true}:{})},{from:BS[2],to:BS[1],dur:250}],currentStep:0};
@@ -224,7 +249,8 @@ function resultGround(ms,info){
   if(G.fl){
    const rlMoves=[];
    // 一塁手(守備位置2)がゴロを処理した場合、投手(守備位置0)が一塁をカバーする
-   if(G.fl.fi===2){
+   // (本塁アウトのパターンは一塁への送球がないのでカバー不要)
+   if(G.fl.fi===2&&homePlay!==1){
     const from={x:FD[0][0],y:FD[0][1]},to=BS[1];
     rlMoves.push({i:0,x:to.x,y:to.y,T:Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/.12)});
    }
@@ -241,7 +267,7 @@ function resultGround(ms,info){
    }
    if(rlMoves.length)G.rl={id:++pid,t0:performance.now(),moves:rlMoves};
   }
-  const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});return
+  const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});if(homePlay===1||homePlay===3)mvAdd({a:3,b:4,T:o+100,o});return
 }
 
 // フライの飛距離(px)。物理モデルは飛距離(m)を返すので、描画と犠飛判定の尺度(px)に換算する。

@@ -70,11 +70,22 @@ test('double play: runner on second always reaches third', () => {
   assert.deepEqual(Array.from(vm.runInContext('G.bases', context)), [0, 0, 0, 1]);
 });
 
-test('double play: bases loaded sends third home and second to third', () => {
-  const context = dpScenario([0, 1, 1, 1], 0);
-  assert.deepEqual(Array.from(vm.runInContext('G.bases', context)), [0, 0, 0, 1]);
+test('bases loaded grounder: home-to-first double play keeps the run off the board', () => {
+  // 満塁ゴロは通常の併殺抽選ではなく専用の3パターン分岐になる (このキューは併殺パターン)
+  const context = playsContext();
+  context.__flightCb = null;
+  context.flight = (to, kind, cb) => {
+    context.__flightCb = cb;
+    vm.runInContext('G.fl = { fi: 5, to: { x: 150, y: 290 }, dur: 600, t0: 0 }', context);
+  };
+  vm.runInContext('G.outs = 0; G.bases = [0, 1, 1, 1]; G.top = true; G.inn = 1; G.runs = [[0], [0]]; G.pts = [0, 0]; G.cnt = { b: 0, s: 0 }; G.pitch = { type: "s" };', context);
+  context.__randQueue = [0.5, 0.5, 0.1]; // distance, no error/infield hit, home-to-first DP pattern
+  context.resultGround(0, { angle: 0 });
+  // 三塁走者は本塁アウト、一・二塁走者は進塁、打者は一塁アウトで一塁は空く
+  assert.deepEqual(Array.from(vm.runInContext('G.bases', context)), [0, 0, 1, 1]);
   context.__flightCb();
-  assert.equal(vm.runInContext('G.runs[0][0]', context), 1);
+  assert.equal(vm.runInContext('G.outs', context), 2);
+  assert.equal(vm.runInContext('G.runs[0][0]', context), 0);
 });
 
 test('double play that ends the inning does not advance runners', () => {
