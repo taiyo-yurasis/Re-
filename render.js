@@ -1,9 +1,12 @@
 /* render.js — 描画(スタジアム・フィールド・ストライクゾーン)とメインループ */
 /* ---- stadium background (drawn once) ---- */
 const bg=document.createElement('canvas');bg.width=480;bg.height=400;
-(()=>{const g=bg.getContext('2d');
+const bgx=bg.getContext('2d');
+let bgDots=null; // 観客席の点々は最初に決め、描き直しても同じ見た目に保つ
+function paintBg(){const g=bgx;
  g.fillStyle='#0a1020';g.fillRect(0,0,480,400);
- for(let i=0;i<1100;i++){const x=Math.random()*480,y=Math.random()*400;if(Math.hypot(x-240,y-375)>R+10){g.fillStyle=`hsl(${ri(0,360)},55%,${ri(30,60)}%)`;g.fillRect(x,y,3,3)}}
+ if(!bgDots){bgDots=[];for(let i=0;i<1100;i++){const x=Math.random()*480,y=Math.random()*400;if(Math.hypot(x-240,y-375)>R+10)bgDots.push([x,y,`hsl(${ri(0,360)},55%,${ri(30,60)}%)`])}}
+ for(const dot of bgDots){g.fillStyle=dot[2];g.fillRect(dot[0],dot[1],3,3)}
  g.fillStyle='#17653d';g.beginPath();g.arc(240,375,R+6,0,2*P);g.fill();
  const wd=r=>{g.beginPath();g.moveTo(240,375);g.arc(240,375,r,-.75*P,-.25*P);g.closePath()};
  wd(R+6);g.fillStyle='#8a5a3a';g.fill();
@@ -16,7 +19,12 @@ const bg=document.createElement('canvas');bg.width=480;bg.height=400;
  g.strokeStyle='#ffd23f';g.lineWidth=4;g.beginPath();g.arc(240,375,R+6,-.75*P,-.25*P);g.stroke();
  g.fillStyle='#fff';BS.slice(1).forEach(b=>g.fillRect(b.x-6,b.y-6,12,12));g.fillRect(235,370,10,8);
  [[30,26],[450,26]].forEach(([x,y])=>{const r=g.createRadialGradient(x,y,0,x,y,70);r.addColorStop(0,'rgba(255,245,200,.9)');r.addColorStop(1,'rgba(255,245,200,0)');g.fillStyle=r;g.fillRect(x-70,y-70,140,140)});
-})();
+}
+// 背面タブのキャンバスは iOS Safari に破棄されることがあり、一度だけ描く bg は
+// 空白のまま二度と直らない。不透明なはずの隅のピクセルで生存を確認し、消えていたら描き直す
+function ensureBg(){try{if(bgx.getImageData(10,10,1,1).data[3]===0)paintBg()}catch(e){}}
+paintBg();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)ensureBg()});
 
 /* ---- drawing ---- */
 function dot(x,y,r,f,s){cx.beginPath();cx.arc(x,y,r,0,7);cx.fillStyle=f;cx.fill();if(s){cx.strokeStyle=s;cx.lineWidth=2;cx.stroke()}}
@@ -123,8 +131,10 @@ function reportLoopError(error,stage){
  const now=performance.now();
  if(now-lastLoopErrorAt>3000){console.error('野球盤 STADIUM: '+stage+'でエラーが発生しました',error);lastLoopErrorAt=now}
 }
+let loopFrame=0;
 function loop(){
  requestAnimationFrame(loop);
+ if(++loopFrame%60===0)ensureBg();
  const now=performance.now();
  try{update(now)}catch(error){reportLoopError(error,'ゲーム更新')}
  try{cx.clearRect(0,0,cv.width,cv.height);drawField(now);drawZone()}catch(error){reportLoopError(error,'描画')}
