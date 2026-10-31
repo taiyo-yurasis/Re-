@@ -11,6 +11,15 @@ const FIELD3D_CAMERAS = [
 function toWorld(x,y,h=0){return{x:(x-240)*FIELD3D_SCALE,y:h*FIELD3D_SCALE,z:(y-375)*FIELD3D_SCALE}}
 function cameraModeNext(mode){const i=FIELD3D_CAMERAS.findIndex(q=>q.id===mode);return FIELD3D_CAMERAS[(i+1+FIELD3D_CAMERAS.length)%FIELD3D_CAMERAS.length].id}
 function fieldPlayerFacing(from,to){return Math.atan2(to.x-from.x,to.z-from.z)}
+function fieldBallState(game,now){
+ if(game.th){const t=game.th,elapsed=now-t.t0;
+  if(t.steps){let start=0,pos=null,air=false,carry=false;for(const q of t.steps){const a=start+(q.dly||0),b=a+q.dur;if(elapsed<a){pos={x:q.from.x,y:q.from.y};carry=!!q.carry;break}if(elapsed<b){const p=cl((elapsed-a)/q.dur,0,1);pos={x:q.from.x+(q.to.x-q.from.x)*p,y:q.from.y+(q.to.y-q.from.y)*p};air=!q.carry;carry=!!q.carry;if(air)pos.h=Math.sin(p*Math.PI)*14;break}start=b;pos={x:q.to.x,y:q.to.y};carry=!!q.carry}return pos?{...pos,h:pos.h||0,visible:true,carry}:null}
+  const p=elapsed/t.dur;if(p<0||p>=1)return null;return{x:t.from.x+(t.to.x-t.from.x)*p,y:t.from.y+(t.to.y-t.from.y)*p,h:Math.sin(p*Math.PI)*14,visible:true,carry:false};
+ }
+ if(game.fl){const f=game.fl,p=cl((now-f.t0)/f.dur,0,1),back=f.wall?cl((now-f.t0-f.dur)/300,0,1)*16:0,dx=f.to.x-HP.x,dy=f.to.y-HP.y,len=Math.hypot(dx,dy)||1;return{x:HP.x+dx*p-dx/len*back,y:HP.y+dy*p-dy/len*back,h:f.kind==='ground'?Math.abs(Math.sin(p*Math.PI*5))*8*(1-p):f.h*4*p*(1-p),visible:true,carry:false}}
+ if(game.phase==='pitch'&&game.pitch){const p=game.pitch,t=cl(p.t||0,0,1),[x,y]=bp(p,t);return{x:240+(x-110)*.45,y:292+78*t,h:60-y*.18,visible:true,carry:false}}
+ return null;
+}
 
 let r3d=null,r3dEnabled=false,r3dRequested=false,r3dContextLost=false,r3dMode='catcher',r3dCamPos=null,r3dLook=null;
 function render3dIsActive(){return !!(r3dEnabled&&r3d&&!r3dContextLost)}
@@ -23,7 +32,7 @@ function render3dInitScene(){
   renderer.setSize(480,400,false);
   renderer.setClearColor(0x0a1020,1);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1020);scene.fog=new THREE.Fog(0x0a1020,18,34);
-  const camera=new THREE.PerspectiveCamera(50,1.2,.1,80);
+  const camera=new THREE.PerspectiveCamera(48,1.2,.1,80);
   scene.add(new THREE.HemisphereLight(0xd9e8ff,0x382d26,2.1));
   const sun=new THREE.DirectionalLight(0xffe5b3,2.1);sun.position.set(-7,13,5);scene.add(sun);
   const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness,flatShading:true});
@@ -62,19 +71,25 @@ function render3dInitScene(){
   // ファウルラインは細い直方体、フェンスは連続した曲面メッシュで作る。
   function segment(a,b,width,height,material,y){const p=toWorld(a[0],a[1]),q=toWorld(b[0],b[1]);const len=Math.hypot(q.x-p.x,q.z-p.z),m=box((p.x+q.x)/2,y,(p.z+q.z)/2,len,height,width,material);m.rotation.y=-Math.atan2(q.z-p.z,q.x-p.x);return m}
   for(const sign of [-1,1])segment([240,375],[240+sign*(R+6)*.7071,375-(R+6)*.7071],.025,.012,mats.line,.03);
-  const fenceSegments=72,fenceVerts=[],fenceIndices=[];
+  const fenceSegments=72,fenceVerts=[],fenceIndices=[],fenceTop=[];
   for(let i=0;i<=fenceSegments;i++){
-   const a=-Math.PI/4+i/fenceSegments*Math.PI/2,fx=240+Math.sin(a)*(R+6),fy=375-Math.cos(a)*(R+6),p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
+   const a=-Math.PI/4+i/fenceSegments*Math.PI/2,edge=Math.abs(a)/(Math.PI/4),radius=(R+6)*(.8+.2*Math.cos(edge*Math.PI/2)**2),fx=240+Math.sin(a)*radius,fy=375-Math.cos(a)*radius,p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
    const innerX=p.x-nx*.035,innerZ=p.z-nz*.035,outerX=p.x+nx*.035,outerZ=p.z+nz*.035;
-   fenceVerts.push(innerX,.02,innerZ,innerX,.42,innerZ,outerX,.02,outerZ,outerX,.42,outerZ);
+   fenceVerts.push(innerX,.02,innerZ,innerX,.42,innerZ,outerX,.02,outerZ,outerX,.42,outerZ);fenceTop.push(new THREE.Vector3(p.x,.43,p.z));
    if(i<fenceSegments){const n=i*4,j=n+4;
     fenceIndices.push(n,n+1,j+1,n,j+1,j, n+2,j+3,n+3,n+2,j+2,j+3,
      n+1,n+3,j+3,n+1,j+3,j+1, n+2,j+2,j,n+2,j,n);
    }
   }
   const fenceGeo=new THREE.BufferGeometry();fenceGeo.setAttribute('position',new THREE.Float32BufferAttribute(fenceVerts,3));fenceGeo.setIndex(fenceIndices);fenceGeo.computeVertexNormals();const fenceMesh=new THREE.Mesh(fenceGeo,mats.wall);fenceMesh.material.side=THREE.DoubleSide;root.add(fenceMesh);
+  root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fenceTop),new THREE.LineBasicMaterial({color:0xffd23f})));
   // 簡易の投手・捕手・野手・打者。共通ジオメトリとマテリアルを使う。
   const bodyGeo=new THREE.CylinderGeometry(.105,.14,.48,7),limbGeo=new THREE.CylinderGeometry(.045,.06,.34,6),headGeo=new THREE.SphereGeometry(.105,8,6),gloveGeo=new THREE.SphereGeometry(.075,7,5);
+  const ballRoot=new THREE.Group();root.add(ballRoot);
+  const ballMesh=new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),mat(0xfffdf5,.55));ballRoot.add(ballMesh);
+  const seamMat=new THREE.MeshBasicMaterial({color:0xc83e42});
+  for(const side of [-1,1]){const seam=new THREE.Mesh(new THREE.TorusGeometry(.052,.004,4,16,.78*Math.PI),seamMat);seam.position.x=side*.025;seam.rotation.y=side*.45;ballRoot.add(seam)}
+  const shadow=new THREE.Mesh(new THREE.CircleGeometry(.11,12),new THREE.MeshBasicMaterial({color:0x050807,transparent:true,opacity:.32,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.012;root.add(shadow);
   const players=[];
   function player(team,x,y,kind){
    const group=new THREE.Group(),world=toWorld(x,y);group.position.set(world.x,0,world.z);group.scale.setScalar(.78);root.add(group);
@@ -89,11 +104,11 @@ function render3dInitScene(){
   const defense=G.top?1:0,batting=G.top?0:1;
   for(let i=0;i<FD.length;i++)player(defense,FD[i][0],FD[i][1],i===0?'pitcher':i===1?'catcher':'fielder');
   const batterSide=G.batterSides?G.batterSides[G.top?0:1]:'right';player(batting,batterSide==='right'?219:261,370,'batter');
-  r3d={renderer,scene,camera,root,players,materials:mats,views:{
-   catcher:{pos:new THREE.Vector3(0,3.5,4.8),look:new THREE.Vector3(0,.35,-3.1)},
+  r3d={renderer,scene,camera,root,players,materials:mats,ballRoot,ballMesh,shadow,views:{
+   catcher:{pos:new THREE.Vector3(0,3.4,5.4),look:new THREE.Vector3(0,.3,-3.2)},
    wide:{pos:new THREE.Vector3(0,5.6,10.4),look:new THREE.Vector3(0,.4,-3.4)},
    overhead:{pos:new THREE.Vector3(0,15,2),look:new THREE.Vector3(0,0,-3.4)},
-   auto:{pos:new THREE.Vector3(0,3.5,4.8),look:new THREE.Vector3(0,.35,-3.1)}
+   auto:{pos:new THREE.Vector3(0,3.4,5.4),look:new THREE.Vector3(0,.3,-3.2)}
   }};
   const onLost=e=>{e.preventDefault();r3dContextLost=true;r3dEnabled=false;const fw=$('f')?.parentElement;if(fw)fw.classList.remove('is-3d');const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle){toggle.disabled=true;toggle.textContent='2D表示'}if(cam)cam.disabled=true};
   const onRestored=()=>{r3dContextLost=false;try{r3d?.renderer.dispose()}catch(e){}r3d=null;if(render3dInitScene()){const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle)toggle.disabled=false;if(cam)cam.disabled=false;render3dSetEnabled(r3dRequested)}};
@@ -137,5 +152,7 @@ function render3dUpdate(now){
  }
  const batter=players[9],side=G.batterSides?G.batterSides[G.top?0:1]:'right',bx=side==='right'?219:261,bp=toWorld(bx,370);batter.group.position.set(bp.x,Math.sin(now*.004)*.012,bp.z);batter.group.rotation.y=side==='right'?.2:-.2;
  const batterMat=bt===0?r3d.materials.red:r3d.materials.blue;if(batter.jersey!==batterMat){batter.jersey=batterMat;batter.group.children[0].material=batterMat;batter.group.children[4].material=batterMat;batter.group.children[5].material=batterMat}
+ const ball=fieldBallState(G,now);r3d.ballRoot.visible=!!ball?.visible;
+ if(ball){const p=toWorld(ball.x,ball.y,ball.carry?15:ball.h);r3d.ballRoot.position.set(p.x,p.y,p.z);r3d.shadow.position.set(p.x,.012,p.z);const radius=1+cl(ball.h/120,0,.35);r3d.shadow.scale.set(radius,radius,1);r3d.shadow.material.opacity=.32/(1+Math.max(0,ball.h)*.025)}
  renderer.render(scene,camera);
 }
