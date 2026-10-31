@@ -87,9 +87,9 @@ function render3dInitScene(){
    const jersey=team===0?mats.red:mats.blue,body=new THREE.Mesh(bodyGeo,jersey);body.position.y=.48;group.add(body);
    const head=new THREE.Mesh(headGeo,mats.skin);head.position.y=.83;group.add(head);
    const legs=[];for(const s of [-1,1]){const leg=new THREE.Mesh(limbGeo,mats.pants);leg.position.set(s*.085,.17,0);group.add(leg);legs.push(leg)}
-   const arms=[];for(const s of [-1,1]){const arm=new THREE.Mesh(limbGeo,jersey);arm.position.set(s*.19,.52,0);arm.rotation.z=s*.42;group.add(arm);arms.push(arm)}
+   const arms=[];for(const s of [-1,1]){const pivot=new THREE.Group();pivot.position.set(s*.16,.68,0);group.add(pivot);const arm=new THREE.Mesh(limbGeo,jersey);arm.position.y=-.14;pivot.add(arm);arms.push(pivot)}
    const glove=new THREE.Mesh(gloveGeo,mats.white);glove.position.set(.24,.37,-.04);group.add(glove);
-   let bat=null;if(kind==='batter'){bat=box(.31,.52,.04,.055,.62,.055,mats.bat,group);bat.rotation.z=-.34}
+   let bat=null;if(kind==='batter'){const right=(G.batterSides?G.batterSides[G.top?0:1]:'right')==='right';bat=new THREE.Group();bat.position.set(right?-.01:.01,-.1,-.03);arms[right?0:1].add(bat);const stick=box(0,.31,0,.055,.62,.055,mats.bat,bat);stick.rotation.z=-.12}
    players.push({group,legs,arms,glove,bat,jersey,team,kind,index:players.length,runPhase:0,travel:0,lastX:world.x,lastZ:world.z,yaw:0,pose:0});return group;
   }
   const defense=G.top?1:0,batting=G.top?0:1;
@@ -143,7 +143,7 @@ function render3dUpdate(now){
  const bt=G.top?0:1,defense=1-bt;
  for(let i=0;i<FD.length;i++){
   const [x,y]=fpos(i,now),p=toWorld(x,y),player=players[i],dx=p.x-player.lastX,dz=p.z-player.lastZ,distance=Math.hypot(dx,dz);player.travel+=distance;player.runPhase+=distance*18;player.lastX=p.x;player.lastZ=p.z;players[i].group.position.x=p.x;players[i].group.position.z=p.z;
-  const jersey=defense===0?r3d.materials.red:r3d.materials.blue;if(players[i].jersey!==jersey){players[i].jersey=jersey;players[i].group.children[0].material=jersey;players[i].group.children[4].material=jersey;players[i].group.children[5].material=jersey}
+  const jersey=defense===0?r3d.materials.red:r3d.materials.blue;if(players[i].jersey!==jersey){players[i].jersey=jersey;players[i].group.children[0].material=jersey;players[i].arms.forEach(a=>a.children[0].material=jersey)}
   const moving=distance>.0007,desiredYaw=moving?Math.atan2(dx,dz):fieldPlayerFacing({x:p.x,z:p.z},{x:home.x,z:home.z});
   let yawDelta=((desiredYaw-player.yaw+Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2)-Math.PI;player.yaw+=cl(yawDelta,-.09,.09);players[i].group.rotation.y=player.yaw;
   const dive=!!(G.fl?.diving&&G.fl.fi===i),throwing=!!(G.th&&G.th.t0&&now-G.th.t0<500),run=moving?1:0;player.pose+=(run-player.pose)*.18;
@@ -152,8 +152,8 @@ function render3dUpdate(now){
   const pulse=Math.sin(now*.005+i)*.012*(1-player.pose);players[i].group.position.y=pulse-(dive?.16:0);
  }
  const batter=players[9],side=G.batterSides?G.batterSides[G.top?0:1]:'right',bx=side==='right'?219:261,bp=toWorld(bx,370);batter.group.position.set(bp.x,Math.sin(now*.004)*.012,bp.z);batter.group.rotation.y=side==='right'?.2:-.2;
- const batterMat=bt===0?r3d.materials.red:r3d.materials.blue;if(batter.jersey!==batterMat){batter.jersey=batterMat;batter.group.children[0].material=batterMat;batter.group.children[4].material=batterMat;batter.group.children[5].material=batterMat}
- const swing=cl((now-G.swingT)/230,0,1),swinging=G.swingT>0&&now-G.swingT<370;batter.group.visible=!(G.mv&&G.mv.moves.some(m=>m.a===0));batter.arms[0].rotation.z=side==='right'?.42:-.42;batter.arms[1].rotation.z=side==='right'?-.42:.42;if(batter.bat)batter.bat.rotation.z=-.34+(swinging?Math.sin(swing*Math.PI)*1.8:0);
+ const batterMat=bt===0?r3d.materials.red:r3d.materials.blue;if(batter.jersey!==batterMat){batter.jersey=batterMat;batter.group.children[0].material=batterMat;batter.arms.forEach(a=>a.children[0].material=batterMat)}
+ const swing=cl((now-G.swingT)/230,0,1),swinging=G.swingT>0&&now-G.swingT<370,mirror=side==='right'?1:-1;batter.group.visible=!(G.mv&&G.mv.moves.some(m=>m.a===0));batter.arms[0].rotation.z=-.42*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*.85:0);batter.arms[1].rotation.z=.32*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*.7:0);batter.arms[0].rotation.x=-.18;batter.arms[1].rotation.x=.12;if(batter.bat)batter.bat.rotation.z=-.18*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*1.15:0);
  const runner=players[10],runnerMove=G.mv?.moves?.find(m=>m.a===0),elapsed=G.mv?now-G.mv.t0:0;runner.group.visible=!!runnerMove&&(!runnerMove.o||elapsed<runnerMove.o);if(runnerMove){const q=rpos(0,runnerMove.b,cl(elapsed/(runnerMove.T||550*runnerMove.b),0,1)),rp=toWorld(q[0],q[1]);runner.group.position.set(rp.x,0,rp.z);runner.runPhase+=Math.hypot(rp.x-runner.lastX,rp.z-runner.lastZ)*18;const stride=Math.sin(runner.runPhase);runner.legs[0].rotation.x=stride*.72;runner.legs[1].rotation.x=-stride*.72;runner.lastX=rp.x;runner.lastZ=rp.z}
  r3d.ballRoot.visible=!!ball?.visible;
  if(ball){const p=toWorld(ball.x,ball.y,ball.carry?15:ball.h);r3d.ballRoot.position.set(p.x,p.y,p.z);r3d.shadow.position.set(p.x,.012,p.z);const radius=1+cl(ball.h/120,0,.35);r3d.shadow.scale.set(radius,radius,1);r3d.shadow.material.opacity=.32/(1+Math.max(0,ball.h)*.025)}
