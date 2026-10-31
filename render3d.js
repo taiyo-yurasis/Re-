@@ -36,7 +36,7 @@ function render3dInitScene(){
   scene.add(new THREE.HemisphereLight(0xd9e8ff,0x382d26,2.1));
   const sun=new THREE.DirectionalLight(0xffe5b3,2.1);sun.position.set(-7,13,5);scene.add(sun);
   const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness,flatShading:true});
-  const mats={grass:[mat(0x247a43),mat(0x2a894b)],dirt:mat(0xb77748),white:mat(0xf5f1df),line:mat(0xe8e4d8),wall:mat(0x245667),seat:[mat(0x263552),mat(0x314366)],red:mat(0xff5a5f),blue:mat(0x4da3ff),skin:mat(0xe2b98d),pants:mat(0xe9e8e2),bat:mat(0xe1bd75)};
+  const mats={grass:[mat(0x247a43),mat(0x2a894b)],dirt:mat(0xb77748),white:mat(0xf5f1df),line:mat(0xe8e4d8),wall:mat(0x245667),red:mat(0xff5a5f),blue:mat(0x4da3ff),skin:mat(0xe2b98d),pants:mat(0xe9e8e2),bat:mat(0xe1bd75)};
   const root=new THREE.Group();scene.add(root);
   function fieldPoly(points,material,y=.005){
    const verts=[];for(let i=1;i<points.length-1;i++){for(const j of [0,i,i+1]){const p=toWorld(points[j][0],points[j][1]);verts.push(p.x,y,p.z)}}
@@ -45,15 +45,6 @@ function render3dInitScene(){
   function disk(x,y,rx,rz,material,height=0,segments=48){const pts=[];for(let i=0;i<segments;i++){const a=i/segments*Math.PI*2;pts.push([x+Math.cos(a)*rx,y+Math.sin(a)*rz])}return fieldPoly([[x,y],...pts],material,height)}
   function box(x,y,z,sx,sy,sz,material,parent=root){const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
   function sphere(parent,x,y,z,r,material,segments=8){const mesh=new THREE.Mesh(new THREE.SphereGeometry(r,segments,6),material);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
-  // 背景と観客席
-  box(0,-.3,-5,.5,.55,.5,mat(0x172238));
-  for(let row=0;row<3;row++){
-   const radius=7.4+row*.52;
-   for(let i=0;i<35;i++){
-    const a=(-.78+i/34*1.56),x=Math.sin(a)*radius,z=-Math.cos(a)*radius;
-    const seat=new THREE.Mesh(new THREE.BoxGeometry(.36,.42,.32),mats.seat[(i+row)%2]);seat.position.set(x,.22+row*.43,z);seat.rotation.y=a;root.add(seat);
-   }
-  }
   // 外野芝のローポリ扇形と刈り込み帯
   const wedge=[];for(let i=0;i<=36;i++){const a=-Math.PI/4+i/36*Math.PI/2;wedge.push([240+Math.sin(a)*(R+6),375-Math.cos(a)*(R+6)])}fieldPoly([[240,375],...wedge],mats.grass[0],-.03);
   for(let ring=0;ring<5;ring++){
@@ -73,7 +64,7 @@ function render3dInitScene(){
   for(const sign of [-1,1])segment([240,375],[240+sign*(R+6)*.7071,375-(R+6)*.7071],.025,.012,mats.line,.03);
   const fenceSegments=72,fenceVerts=[],fenceIndices=[],fenceTop=[];
   for(let i=0;i<=fenceSegments;i++){
-   const a=-Math.PI/4+i/fenceSegments*Math.PI/2,edge=Math.abs(a)/(Math.PI/4),radius=(R+6)*(.8+.2*Math.cos(edge*Math.PI/2)**2),fx=240+Math.sin(a)*radius,fy=375-Math.cos(a)*radius,p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
+   const a=-Math.PI/4+i/fenceSegments*Math.PI/2,radius=R+6,fx=240+Math.sin(a)*radius,fy=375-Math.cos(a)*radius,p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
    const innerX=p.x-nx*.035,innerZ=p.z-nz*.035,outerX=p.x+nx*.035,outerZ=p.z+nz*.035;
    fenceVerts.push(innerX,.02,innerZ,innerX,.42,innerZ,outerX,.02,outerZ,outerX,.42,outerZ);fenceTop.push(new THREE.Vector3(p.x,.43,p.z));
    if(i<fenceSegments){const n=i*4,j=n+4;
