@@ -23,7 +23,7 @@ function render3dInitScene(){
   renderer.setSize(480,400,false);
   renderer.setClearColor(0x0a1020,1);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1020);scene.fog=new THREE.Fog(0x0a1020,18,34);
-  const camera=new THREE.PerspectiveCamera(42,1.2,.1,80);
+  const camera=new THREE.PerspectiveCamera(52,1.2,.1,80);
   scene.add(new THREE.HemisphereLight(0xd9e8ff,0x382d26,2.1));
   const sun=new THREE.DirectionalLight(0xffe5b3,2.1);sun.position.set(-7,13,5);scene.add(sun);
   const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness,flatShading:true});
@@ -68,7 +68,7 @@ function render3dInitScene(){
   const bodyGeo=new THREE.CylinderGeometry(.105,.14,.48,7),limbGeo=new THREE.CylinderGeometry(.045,.06,.34,6),headGeo=new THREE.SphereGeometry(.105,8,6),gloveGeo=new THREE.SphereGeometry(.075,7,5);
   const players=[];
   function player(team,x,y,kind){
-   const group=new THREE.Group(),world=toWorld(x,y);group.position.set(world.x,0,world.z);root.add(group);
+   const group=new THREE.Group(),world=toWorld(x,y);group.position.set(world.x,0,world.z);group.scale.setScalar(.78);root.add(group);
    const jersey=team===0?mats.red:mats.blue,body=new THREE.Mesh(bodyGeo,jersey);body.position.y=.48;group.add(body);
    const head=new THREE.Mesh(headGeo,mats.skin);head.position.y=.83;group.add(head);
    const legs=[];for(const s of [-1,1]){const leg=new THREE.Mesh(limbGeo,mats.pants);leg.position.set(s*.085,.17,0);group.add(leg);legs.push(leg)}
@@ -81,10 +81,10 @@ function render3dInitScene(){
   for(let i=0;i<FD.length;i++)player(defense,FD[i][0],FD[i][1],i===0?'pitcher':i===1?'catcher':'fielder');
   const batterSide=G.batterSides?G.batterSides[G.top?0:1]:'right';player(batting,batterSide==='right'?219:261,370,'batter');
   r3d={renderer,scene,camera,root,players,materials:mats,views:{
-   catcher:{pos:new THREE.Vector3(0,1.9,1.8),look:new THREE.Vector3(0,.45,-3.0)},
+   catcher:{pos:new THREE.Vector3(0,3.0,6.5),look:new THREE.Vector3(0,.5,-3.2)},
    wide:{pos:new THREE.Vector3(0,5.6,10.4),look:new THREE.Vector3(0,.4,-3.4)},
    overhead:{pos:new THREE.Vector3(0,15,2),look:new THREE.Vector3(0,0,-3.4)},
-   auto:{pos:new THREE.Vector3(0,1.9,1.8),look:new THREE.Vector3(0,.45,-3.0)}
+   auto:{pos:new THREE.Vector3(0,3.0,6.5),look:new THREE.Vector3(0,.5,-3.2)}
   }};
   const onLost=e=>{e.preventDefault();r3dContextLost=true;r3dEnabled=false;const fw=$('f')?.parentElement;if(fw)fw.classList.remove('is-3d');const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle){toggle.disabled=true;toggle.textContent='2D表示'}if(cam)cam.disabled=true};
   const onRestored=()=>{r3dContextLost=false;try{r3d?.renderer.dispose()}catch(e){}r3d=null;if(render3dInitScene()){const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle)toggle.disabled=false;if(cam)cam.disabled=false;render3dSetEnabled(r3dRequested)}};
