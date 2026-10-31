@@ -34,6 +34,7 @@ const CPU_DIFFICULTY = {
 
 /* ---- 固定ゲーム設定(バランス調整はここ) ---- */
 const CONFIG = {
+ render3d: true,           // 3Dフィールド描画を初期状態で有効にする(設定UIから切替可能)
  batMode: 'physics',       // 'physics' = 打球物理モデル / 'table' = 従来の hitTable
  physicsCorrectionScale: 0.25, // 物理モデルでの球種ボーナス・遅れ補正の倍率
  courseIdealMs: 40,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)

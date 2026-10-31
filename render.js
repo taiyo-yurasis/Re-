@@ -171,6 +171,6 @@ function loop(){
  if(++loopFrame%60===0)ensureBg();
  const now=performance.now();
  try{update(now)}catch(error){reportLoopError(error,'ゲーム更新')}
- try{cx.clearRect(0,0,cv.width,cv.height);drawField(now);drawZone()}catch(error){reportLoopError(error,'描画')}
+ try{if(typeof render3dIsActive==='function'&&render3dIsActive())render3dUpdate(now);else{cx.clearRect(0,0,cv.width,cv.height);drawField(now)}drawZone()}catch(error){reportLoopError(error,'描画')}
  try{ctl()}catch(error){reportLoopError(error,'操作UI更新')}
 }

@@ -14,9 +14,14 @@ td:first-child{text-align:left;font-weight:700;white-space:nowrap}
 .l{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--line);margin-left:4px}
 .l.on.lb{background:#4cd964}.l.on.ls{background:var(--acc)}.l.on.lo{background:#ff5a5f}
 #st{margin:6px 2px;font-size:14px;font-weight:700;color:var(--acc)}
-.fw{position:relative}
+.fw{position:relative;isolation:isolate}
 canvas{display:block;width:100%;height:auto;border-radius:12px}
 #f{touch-action:none}
+#f3d{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;z-index:1}
+.fw.is-3d #f{opacity:0}
+.fw.is-3d #f3d{opacity:1}
+#view-ctl{position:absolute;z-index:2;top:8px;right:8px;display:flex;gap:5px;pointer-events:auto}
+#view-ctl .bt{padding:5px 8px;font-size:11px;background:rgba(22,33,62,.88);backdrop-filter:blur(4px)}
 #bn{position:absolute;left:0;right:0;top:34%;text-align:center;font-weight:900;font-size:30px;color:#fff;text-shadow:0 2px 0 #000,0 0 18px var(--acc);pointer-events:none;opacity:0}
 #bn.on{animation:pop 1.1s ease-out forwards}
 #bn.hr{font-size:40px;color:var(--acc)}
