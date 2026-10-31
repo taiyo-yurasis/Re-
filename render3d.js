@@ -23,7 +23,7 @@ function render3dInitScene(){
   renderer.setSize(480,400,false);
   renderer.setClearColor(0x0a1020,1);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1020);scene.fog=new THREE.Fog(0x0a1020,18,34);
-  const camera=new THREE.PerspectiveCamera(52,1.2,.1,80);
+  const camera=new THREE.PerspectiveCamera(50,1.2,.1,80);
   scene.add(new THREE.HemisphereLight(0xd9e8ff,0x382d26,2.1));
   const sun=new THREE.DirectionalLight(0xffe5b3,2.1);sun.position.set(-7,13,5);scene.add(sun);
   const mat=(color,roughness=1)=>new THREE.MeshStandardMaterial({color,roughness,flatShading:true});
@@ -59,11 +59,20 @@ function render3dInitScene(){
   disk(240,292,13,13,mats.dirt,.025,20);
   const home=toWorld(240,375,.045);box(home.x,.045,home.z,.22,.055,.2,mats.white);
   for(let i=1;i<=3;i++){const p=toWorld(BS[i].x,BS[i].y,.045);const base=box(p.x,.045,p.z,.22,.055,.22,mats.white);base.rotation.y=Math.PI/4}
-  // ファウルラインとフェンス。細い直方体を座標間に置く。
+  // ファウルラインは細い直方体、フェンスは連続した曲面メッシュで作る。
   function segment(a,b,width,height,material,y){const p=toWorld(a[0],a[1]),q=toWorld(b[0],b[1]);const len=Math.hypot(q.x-p.x,q.z-p.z),m=box((p.x+q.x)/2,y,(p.z+q.z)/2,len,height,width,material);m.rotation.y=-Math.atan2(q.z-p.z,q.x-p.x);return m}
   for(const sign of [-1,1])segment([240,375],[240+sign*(R+6)*.7071,375-(R+6)*.7071],.025,.012,mats.line,.03);
-  const fence=[];for(let i=0;i<=36;i++){const a=-Math.PI/4+i/36*Math.PI/2;fence.push([240+Math.sin(a)*(R+6),375-Math.cos(a)*(R+6)])}
-  for(let i=0;i<fence.length-1;i++)segment(fence[i],fence[i+1],.055,.38,mats.wall,.2);
+  const fenceSegments=72,fenceVerts=[],fenceIndices=[];
+  for(let i=0;i<=fenceSegments;i++){
+   const a=-Math.PI/4+i/fenceSegments*Math.PI/2,fx=240+Math.sin(a)*(R+6),fy=375-Math.cos(a)*(R+6),p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
+   const innerX=p.x-nx*.035,innerZ=p.z-nz*.035,outerX=p.x+nx*.035,outerZ=p.z+nz*.035;
+   fenceVerts.push(innerX,.02,innerZ,innerX,.42,innerZ,outerX,.02,outerZ,outerX,.42,outerZ);
+   if(i<fenceSegments){const n=i*4,j=n+4;
+    fenceIndices.push(n,n+1,j+1,n,j+1,j, n+2,j+3,n+3,n+2,j+2,j+3,
+     n+1,n+3,j+3,n+1,j+3,j+1, n+2,j+2,j,n+2,j,n);
+   }
+  }
+  const fenceGeo=new THREE.BufferGeometry();fenceGeo.setAttribute('position',new THREE.Float32BufferAttribute(fenceVerts,3));fenceGeo.setIndex(fenceIndices);fenceGeo.computeVertexNormals();const fenceMesh=new THREE.Mesh(fenceGeo,mats.wall);fenceMesh.material.side=THREE.DoubleSide;root.add(fenceMesh);
   // 簡易の投手・捕手・野手・打者。共通ジオメトリとマテリアルを使う。
   const bodyGeo=new THREE.CylinderGeometry(.105,.14,.48,7),limbGeo=new THREE.CylinderGeometry(.045,.06,.34,6),headGeo=new THREE.SphereGeometry(.105,8,6),gloveGeo=new THREE.SphereGeometry(.075,7,5);
   const players=[];
@@ -81,10 +90,10 @@ function render3dInitScene(){
   for(let i=0;i<FD.length;i++)player(defense,FD[i][0],FD[i][1],i===0?'pitcher':i===1?'catcher':'fielder');
   const batterSide=G.batterSides?G.batterSides[G.top?0:1]:'right';player(batting,batterSide==='right'?219:261,370,'batter');
   r3d={renderer,scene,camera,root,players,materials:mats,views:{
-   catcher:{pos:new THREE.Vector3(0,3.0,6.5),look:new THREE.Vector3(0,.5,-3.2)},
+   catcher:{pos:new THREE.Vector3(0,3.5,4.8),look:new THREE.Vector3(0,.35,-3.1)},
    wide:{pos:new THREE.Vector3(0,5.6,10.4),look:new THREE.Vector3(0,.4,-3.4)},
    overhead:{pos:new THREE.Vector3(0,15,2),look:new THREE.Vector3(0,0,-3.4)},
-   auto:{pos:new THREE.Vector3(0,3.0,6.5),look:new THREE.Vector3(0,.5,-3.2)}
+   auto:{pos:new THREE.Vector3(0,3.5,4.8),look:new THREE.Vector3(0,.35,-3.1)}
   }};
   const onLost=e=>{e.preventDefault();r3dContextLost=true;r3dEnabled=false;const fw=$('f')?.parentElement;if(fw)fw.classList.remove('is-3d');const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle){toggle.disabled=true;toggle.textContent='2D表示'}if(cam)cam.disabled=true};
   const onRestored=()=>{r3dContextLost=false;try{r3d?.renderer.dispose()}catch(e){}r3d=null;if(render3dInitScene()){const toggle=$('view-toggle'),cam=$('camera-cycle');if(toggle)toggle.disabled=false;if(cam)cam.disabled=false;render3dSetEnabled(r3dRequested)}};
