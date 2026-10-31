@@ -20,6 +20,21 @@ function fieldBallState(game,now){
  if(game.phase==='pitch'&&game.pitch){const p=game.pitch,t=cl(p.t||0,0,1),[x,y]=bp(p,t);return{x:240+(x-110)*.45,y:292+78*t,h:60-y*.18,visible:true,carry:false}}
  return null;
 }
+// 2D版 drawField の走者描画と同じ規則で、表示すべき走者の2D座標を返す純関数。
+// mv 進行中は stay(残留塁)と moves(進塁、アウトで消える m.o 付き)を、それ以外は塁上の走者を返す。
+function fieldRunnerStates(game,now){
+ const out=[];
+ const mv=game.mv&&now-game.mv.t0<game.mv.dur?game.mv:null;
+ if(mv){
+  for(const b of mv.stay||[])out.push({x:BS[b].x,y:BS[b].y,run:false});
+  for(const m of mv.moves||[]){const el=now-mv.t0;if(m.o&&el>=m.o)continue;const q=rpos(m.a,m.b,cl(el/(m.T||550*(m.b-m.a)),0,1));out.push({x:q[0],y:q[1],run:true})}
+ }else if(game.bases){for(let b=1;b<4;b++)if(game.bases[b])out.push({x:BS[b].x,y:BS[b].y,run:false})}
+ return out;
+}
+// 3D表示の可否。完成まではテスト環境(URL ?3d=1 / localStorage yakyu-stadium-3d=test)限定とし、
+// 完成時は CONFIG.render3d を true にすると全員へ公開される。
+function render3dTestAccess(){try{return new URLSearchParams(location.search).get('3d')==='1'||localStorage.getItem('yakyu-stadium-3d')==='test'}catch(e){return false}}
+function render3dAllowed(){return (typeof CONFIG!=='undefined'&&CONFIG.render3d===true)||render3dTestAccess()}
 
 let r3d=null,r3dEnabled=false,r3dRequested=false,r3dContextLost=false,r3dMode='catcher',r3dCamPos=null,r3dLook=null;
 function render3dIsActive(){return !!(r3dEnabled&&r3d&&!r3dContextLost)}
@@ -95,8 +110,9 @@ function render3dInitScene(){
   const defense=G.top?1:0,batting=G.top?0:1;
   for(let i=0;i<FD.length;i++)player(defense,FD[i][0],FD[i][1],i===0?'pitcher':i===1?'catcher':'fielder');
   const batterSide=G.batterSides?G.batterSides[G.top?0:1]:'right';player(batting,batterSide==='right'?219:261,370,'batter');
-  player(batting,HP.x,HP.y,'runner');
-  r3d={renderer,scene,camera,root,players,materials:mats,ballRoot,ballMesh,shadow,autoPlay:false,autoPos:new THREE.Vector3(),autoLook:new THREE.Vector3(),views:{
+  // 走者は最大4人(塁上3人+打者走者)。塁の状態に合わせて毎フレーム割り当てるプール方式にする。
+  for(let i=0;i<4;i++){const g=player(batting,HP.x,HP.y,'runner');g.visible=false}
+  r3d={renderer,scene,camera,root,players,runners:players.slice(10),materials:mats,ballRoot,ballMesh,shadow,autoPlay:false,autoPos:new THREE.Vector3(),autoLook:new THREE.Vector3(),views:{
    catcher:{pos:new THREE.Vector3(0,3.4,5.4),look:new THREE.Vector3(0,.3,-3.2)},
    wide:{pos:new THREE.Vector3(0,5.6,10.4),look:new THREE.Vector3(0,.4,-3.4)},
    overhead:{pos:new THREE.Vector3(0,15,2),look:new THREE.Vector3(0,0,-3.4)},
@@ -120,11 +136,13 @@ function render3dSetMode(mode,persist=true){
 }
 function initRender3d(){
  const toggle=$('view-toggle'),cameraButton=$('camera-cycle');if(!toggle||!cameraButton)return;
+ // 完成まではテスト環境限定: 対象外では切替UI自体を出さず、常に2D表示にする。
+ if(!render3dAllowed()){const ctl=$('view-ctl');if(ctl)ctl.style.display='none';toggle.disabled=true;cameraButton.disabled=true;return}
  try{const saved=localStorage.getItem('yakyu-stadium-camera');if(FIELD3D_CAMERAS.some(q=>q.id===saved))r3dMode=saved}catch(e){}
  render3dSetMode(r3dMode,false);
  const ok=render3dInitScene();toggle.disabled=!ok;cameraButton.disabled=!ok;
  if(!ok){toggle.textContent='2D表示';toggle.title='WebGLを利用できないため2D表示です';return}
- render3dSetEnabled(CONFIG.render3d!==false);
+ render3dSetEnabled(true);
  toggle.addEventListener('click',()=>render3dSetEnabled(!r3dEnabled));
  cameraButton.addEventListener('click',()=>render3dSetMode(cameraModeNext(r3dMode)));
  addEventListener('keydown',e=>{if(e.repeat||e.key.toLowerCase()!=='c')return;const target=e.target;if(target instanceof Element&&target.closest('input,textarea,select,button,[contenteditable="true"],[role="dialog"]'))return;if($('ov').style.display!=='none'||$('patch-ov')?.classList.contains('open'))return;render3dSetMode(cameraModeNext(r3dMode))});
@@ -154,7 +172,16 @@ function render3dUpdate(now){
  const batter=players[9],side=G.batterSides?G.batterSides[G.top?0:1]:'right',bx=side==='right'?219:261,bp=toWorld(bx,370);batter.group.position.set(bp.x,Math.sin(now*.004)*.012,bp.z);batter.group.rotation.y=side==='right'?.2:-.2;
  const batterMat=bt===0?r3d.materials.red:r3d.materials.blue;if(batter.jersey!==batterMat){batter.jersey=batterMat;batter.group.children[0].material=batterMat;batter.arms.forEach(a=>a.children[0].material=batterMat)}
  const swing=cl((now-G.swingT)/230,0,1),swinging=G.swingT>0&&now-G.swingT<370,mirror=side==='right'?1:-1;batter.group.visible=!(G.mv&&G.mv.moves.some(m=>m.a===0));batter.arms[0].rotation.z=-.42*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*.85:0);batter.arms[1].rotation.z=.32*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*.7:0);batter.arms[0].rotation.x=-.18;batter.arms[1].rotation.x=.12;if(batter.bat)batter.bat.rotation.z=-.18*mirror+(swinging?mirror*Math.sin(swing*Math.PI)*1.15:0);
- const runner=players[10],runnerMove=G.mv?.moves?.find(m=>m.a===0),elapsed=G.mv?now-G.mv.t0:0;runner.group.visible=!!runnerMove&&(!runnerMove.o||elapsed<runnerMove.o);if(runnerMove){const q=rpos(0,runnerMove.b,cl(elapsed/(runnerMove.T||550*runnerMove.b),0,1)),rp=toWorld(q[0],q[1]);runner.group.position.set(rp.x,0,rp.z);runner.runPhase+=Math.hypot(rp.x-runner.lastX,rp.z-runner.lastZ)*18;const stride=Math.sin(runner.runPhase);runner.legs[0].rotation.x=stride*.72;runner.legs[1].rotation.x=-stride*.72;runner.lastX=rp.x;runner.lastZ=rp.z}
+ const runnerMat=bt===0?r3d.materials.red:r3d.materials.blue,runnerStates=fieldRunnerStates(G,now);
+ r3d.runners.forEach((runner,i)=>{
+  const st=runnerStates[i];runner.group.visible=!!st;if(!st)return;
+  if(runner.jersey!==runnerMat){runner.jersey=runnerMat;runner.group.children[0].material=runnerMat;runner.arms.forEach(a=>a.children[0].material=runnerMat)}
+  const rp=toWorld(st.x,st.y),dx=rp.x-runner.lastX,dz=rp.z-runner.lastZ,d=Math.hypot(dx,dz);
+  runner.group.position.set(rp.x,0,rp.z);
+  if(st.run&&d>0){runner.runPhase+=d*18;const stride=Math.sin(runner.runPhase);runner.legs[0].rotation.x=stride*.72;runner.legs[1].rotation.x=-stride*.72;runner.arms[0].rotation.x=-stride*.48;runner.arms[1].rotation.x=stride*.48;if(d>.0007)runner.group.rotation.y=Math.atan2(dx,dz)}
+  else{runner.legs[0].rotation.x=0;runner.legs[1].rotation.x=0;runner.group.rotation.y=fieldPlayerFacing({x:rp.x,z:rp.z},{x:home.x,z:home.z})}
+  runner.lastX=rp.x;runner.lastZ=rp.z;
+ });
  r3d.ballRoot.visible=!!ball?.visible;
  if(ball){const p=toWorld(ball.x,ball.y,ball.carry?15:ball.h);r3d.ballRoot.position.set(p.x,p.y,p.z);r3d.shadow.position.set(p.x,.012,p.z);const radius=1+cl(ball.h/120,0,.35);r3d.shadow.scale.set(radius,radius,1);r3d.shadow.material.opacity=.32/(1+Math.max(0,ball.h)*.025)}
  renderer.render(scene,camera);
