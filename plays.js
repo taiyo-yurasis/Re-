@@ -56,10 +56,44 @@ function pickFielder(to,kind){
  if(kind==='ground'&&Math.hypot(to.x-240,to.y-310)<50)candidates.push(0);
  return nrst(to,candidates);
 }
+/* ===== 打球データ表示 (C案) =====
+   飛行中はフィールド左下に中継風カード (#bcard)、結果確定後は詳細メッセージ行に、
+   物理モデルが計算済みの info (打球速度・角度・推定飛距離) をそのまま出す。
+   新しい判定・計算は追加しない。対象はインプレー打球のみで、info に数字が無い
+   打球 (ファウル・空振り・見逃し・旧table方式など) には何も出ない。
+   バレルの閾値は BATTED_EXP の3つの値に集約する。 */
+const BATTED_EXP={enabled:true,barrelSpeed:160,barrelLaunchMin:18,barrelLaunchMax:36};
+const BATTED_PLAY_KINDS=['1B','2B','3B','HR','fly','gr'];
+let battedPending=null; // result() が置き、次の flight() が消費する (飛行中カード用)
+function battedDataOf(info,noDist){
+ if(!info||!Number.isFinite(info.speed)||!Number.isFinite(info.launch))return null;
+ const speed=Math.round(info.speed),launch=Math.round(info.launch);
+ const dist=!noDist&&Number.isFinite(info.dist)?Math.round(info.dist):null;
+ const barrel=speed>=BATTED_EXP.barrelSpeed&&launch>=BATTED_EXP.barrelLaunchMin&&launch<=BATTED_EXP.barrelLaunchMax;
+ return{speed,launch,dist,barrel};
+}
+function battedLine(d){return `打球 ${d.speed}km/h / 角度 ${d.launch}°`+(d.dist!=null?` / 推定飛距離 ${d.dist}m`:'')}
+function showBattedCard(d){
+ const el=typeof $==='function'?$('bcard'):null;if(!el)return;
+ el.innerHTML=`<div class="bc-spd">打球 ${d.speed}<small>km/h</small>${d.barrel?'<span class="bc-barrel">バレル</span>':''}</div><div class="bc-sub">角度 ${d.launch}°${d.dist!=null?` / 推定飛距離 ${d.dist}m`:''}</div>`;
+ el.classList.add('on');
+}
+function hideBattedCard(){const el=typeof $==='function'?$('bcard'):null;if(el)el.classList.remove('on')}
+// トグル (フィールド左上)。OFF の間は自機のカード・結果行とも出ない
+(function(){
+ const btn=typeof $==='function'?$('exp-batted'):null;
+ if(!btn||typeof btn.addEventListener!=='function')return;
+ const paint=()=>{btn.textContent=BATTED_EXP.enabled?'打球データ ON':'打球データ OFF';btn.classList.toggle('on',BATTED_EXP.enabled);if(btn.setAttribute)btn.setAttribute('aria-pressed',String(BATTED_EXP.enabled))};
+ btn.addEventListener('click',()=>{BATTED_EXP.enabled=!BATTED_EXP.enabled;if(!BATTED_EXP.enabled)hideBattedCard();paint()});
+ paint();
+})();
+
 function flight(to,kind,cb,out,o){
  const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6,opts=o||{};
  G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,fi:opts.fi??pickFielder(to,kind),h:kind==='hr'?130:30+d*.35,...opts};
- sync();later(dur+250,cb)
+ const bd=battedPending;battedPending=null;
+ if(bd){G.fl.bd=bd;if(BATTED_EXP.enabled)showBattedCard(bd)}
+ sync();later(dur+250,()=>{if(bd)hideBattedCard();if(cb)cb()})
 }
 function next(ms){updateHud();later(ms,ready)}
 function fin(ms){if(G.th&&G.th.steps)ms=Math.max(ms,G.th.steps.reduce((a,q)=>a+(q.dly||0)+q.dur,0)-(performance.now()-G.th.t0)+400);if(G.mv)ms=Math.max(ms,G.mv.dur-(performance.now()-G.mv.t0)+350);G.cnt={b:0,s:0};if(!G.walkoff&&G.outs<3)selectNextBatterSide();updateHud();
@@ -162,6 +196,11 @@ function showDetailMsg(k, ms, info) {
  if (info && info.dir) {
   const direction = {pull:'引っ張り',center:'センター',oppo:'流し'}[info.dir];
   if (direction) parts.push(`方向：${direction}`);
+ }
+ // 打球データ表示 (C案・結果行): 数字があるインプレー打球だけ、次球まで残る行に足す
+ if (BATTED_EXP.enabled) {
+  const bd = battedDataOf(info, k === 'gr');
+  if (bd) { parts.push(battedLine(bd)); if (bd.barrel) parts.push('バレル'); }
  }
  setMsg(parts.join(' ｜ '));
 }
@@ -323,6 +362,11 @@ function resultFly(ms,info){
 }
 function result(k,ms,info){
  if(G.prac)return pracResult(k,ms,info);
+ // 打球データ表示: インプレー打球なら飛行中カード用データを控える (flight() が消費する)。
+ // 表示可否は BATTED_EXP.enabled を表示側 (カード・結果行・ゲスト受信側) で見るので、
+ // ここでは数字の有無だけで控え、オンラインのスナップショットにも載せられるようにする。
+ battedPending=BATTED_PLAY_KINDS.includes(k)?battedDataOf(info,k==='gr'):null;
+ if(!battedPending)hideBattedCard(); // 前の打球のカードが残っていたら消す (通常進行では飛行終了時に消えている)
  if(G.pitch)G.prevPitch={type:G.pitch.type,res:k}; // CPU配球(空振りした球の連投など)が参照する
  if(typeof learnFromPitch==='function')learnFromPitch(k); // CPUの学習(相手の傾向を読む)が参照する
  if(k==='ball')return resultBall(ms,info);

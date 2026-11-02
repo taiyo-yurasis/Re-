@@ -69,7 +69,7 @@ function curTick(){
 setInterval(curTick,100);
 function snap(){
  const n=performance.now(),p=G.pitch,f=G.fl;
- return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,sliding:f.sliding,finePlay:f.finePlay,groundPlay:f.groundPlay,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves},cur:snapCur(n)}
+ return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,sliding:f.sliding,finePlay:f.finePlay,groundPlay:f.groundPlay,bd:f.bd||null,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves},cur:snapCur(n)}
 }
 let lastSync=0;const sync=()=>{const n=performance.now();if(G.net==='host'&&G.gid&&n-lastSync>110){lastSync=n;send('snap',snap())}};
 setInterval(sync,200);
@@ -105,6 +105,8 @@ function validSnap(s){
   (s.f.wall!=null&&typeof s.f.wall!=='boolean')||(s.f.diving!=null&&typeof s.f.diving!=='boolean')||
   (s.f.sliding!=null&&typeof s.f.sliding!=='boolean')||(s.f.finePlay!=null&&typeof s.f.finePlay!=='boolean')||
   (s.f.groundPlay!=null&&!['dive','slide'].includes(s.f.groundPlay))||
+  (s.f.bd!=null&&(!s.f.bd||typeof s.f.bd!=='object'||!numRange(s.f.bd.speed,0,300)||!numRange(s.f.bd.launch,-90,90)||
+   (s.f.bd.dist!=null&&!numRange(s.f.bd.dist,0,300))||(s.f.bd.barrel!=null&&typeof s.f.bd.barrel!=='boolean')))||
   (s.f.fi!=null&&!intRange(s.f.fi,0,FD.length-1))||(s.f.ri!=null&&!intRange(s.f.ri,0,FD.length-1))||
   (s.f.isHit!=null&&typeof s.f.isHit!=='boolean')||
   (s.f.h!=null&&!numRange(s.f.h,0,300))))return false;
@@ -123,6 +125,14 @@ function validSnap(s){
   (s.cur[k].type!=null&&!Object.hasOwn(TY,s.cur[k].type)))))return false;
  return true
 }
+// ゲスト/観戦: ホストの打球データ (スナップショットの f.bd) で飛行中カードを出す。
+// 表示可否は自機のトグル (BATTED_EXP.enabled) に従い、消去タイミングはホスト側 (飛行時間+250ms) に合わせる
+function guestBattedCard(f){
+ if(!f||!f.bd||typeof BATTED_EXP==='undefined'||!BATTED_EXP.enabled||typeof showBattedCard!=='function')return;
+ showBattedCard(f.bd);
+ const id=f.id,remain=Math.max(0,(Number.isFinite(f.dur)?f.dur:0)+250-(Number.isFinite(f.age)?f.age:0));
+ later(remain,()=>{if(!G.fl||G.fl.id===id)hideBattedCard()});
+}
 function applySnap(s){
  if(!(G.net==='guest'||G.net==='spec')||!validSnap(s))return;
  if(s.gid!==G.gid){G.gid=s.gid;G.seq=0;gb=0;G.over=false;waitingRoom=false;curSamples[0].length=0;curSamples[1].length=0;if(helloTimer){clearInterval(helloTimer);helloTimer=null}if(helloTimeout){clearTimeout(helloTimeout);helloTimeout=null}if(specTimeout){clearTimeout(specTimeout);specTimeout=null}$('cancel-room').style.display='none';setOvBtns(false);$('ov').style.display='none';if(G.net==='guest'&&Number.isInteger(s.hostTeam))G.me=1-s.hostTeam}
@@ -131,7 +141,7 @@ function applySnap(s){
  if(G.phase!=='sent'||s.ph!=='aim'||n-G.sentAt>1500)G.phase=s.ph;
  if(s.ph==='over'&&!G.over)over();
  if(s.p){if(!G.pitch||G.pitch.id!==s.p.id)G.pitch={...s.p,t0:n-s.p.age,t:0};if(s.p.fr!=null)G.pitch.t=s.p.fr}else G.pitch=null;
- if(s.f){if(!G.fl||G.fl.id!==s.f.id)G.fl={...s.f,t0:n-s.f.age}}else G.fl=null;
+ if(s.f){if(!G.fl||G.fl.id!==s.f.id){G.fl={...s.f,t0:n-s.f.age};guestBattedCard(s.f)}}else{G.fl=null;if(typeof hideBattedCard==='function')hideBattedCard()}
  if(s.mv){if(!G.mv||G.mv.id!==s.mv.id)G.mv={...s.mv,t0:n-s.mv.age}}else G.mv=null;
  if(s.th){if(!G.th||G.th.id!==s.th.id)G.th={...s.th,t0:n-s.th.age}}else G.th=null;
  if(s.rl){if(!G.rl||G.rl.id!==s.rl.id)G.rl={...s.rl,t0:n-s.rl.age}}else G.rl=null;
