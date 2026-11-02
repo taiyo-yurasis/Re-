@@ -224,6 +224,17 @@ function resultGround(ms,info){
   applyRunnerResult(runnerResult);
   if(homePlay===1)G.bases[1]=1; // 本塁アウトのパターンでは打者走者が一塁に残る
   const r=runnerResult.runs;
+  // 見た目のみ: 内野ゴロのアウトの約20%で、内野手(投手除く一・二・三・遊)が
+  // ダイビング/スライディング捕球してから一塁へ送球する。併殺と本塁併殺には付けない。
+  // 捕球・送球・アウト判定・走者の動きは従来どおりで、演出は捕球までの移動時間の範囲内だけ。
+  // (ここまでのゲーム上の抽選はすべて終わっているので、この乱数は判定に影響しない)
+  // 投手の正面などで本来は投手が処理する打球でも、投手自身はダイブさせず、
+  // 最も近い内野手が捕球する見た目に寄せる (fi は野手の移動アニメーション専用で、
+  // 捕球時刻は dur の92%に丸められるため送球・判定のタイミングは変わらない)。
+  const groundRolled=!dp&&homePlay!==3&&Math.random()<CONFIG.groundDiveRate;
+  const groundPlay=groundRolled?(Math.random()<.5?'dive':'slide'):null;
+  const groundFiRaw=pickFielder(gto,'ground');
+  const groundFi=groundPlay&&!(groundFiRaw>=2&&groundFiRaw<=5)?nrst(gto,[2,3,4,5]):groundFiRaw;
   flight(gto,'ground',()=>{
    let m='ゴロアウト';
    if(homePlay===1){G.outs++;m='本塁アウト!'}
@@ -244,7 +255,7 @@ function resultGround(ms,info){
     }else G.th={id:++pid,t0:performance.now(),dur:380,from:G.fl.to,to:BS[1]};
    }
    showDetailMsg('gr',ms,info);fin(800)
-  },1);
+  },1,groundPlay?{fi:groundFi,groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:null);
   // ベースカバーの移動。送球が始まる前に動き出せるよう、打球の発生と同時に rl へ登録する。
   if(G.fl){
    const rlMoves=[];
@@ -303,11 +314,11 @@ function resultFly(ms,info){
     if(sacFly){addMatchPts(G.top?0:1,450);scoredRuns=runnerResult.runs;m='犠牲フライ!'}
     else if(tagUpSecond)m='タッチアップ!';
    }
-   banner(m,isFinePlay?'hr':'');
+   banner(m,isFinePlay?'fine':'');
    if(scoredRuns){score(scoredRuns);banner(`+${scoredRuns}点!`);}
    showDetailMsg('fly',ms,info);
-   fin(1000);
-  },1,isFinePlay?{diving:true}:null);
+   fin(isFinePlay?CONFIG.finePlayLingerMs:1000);
+  },1,isFinePlay?{diving:true,finePlay:true}:null);
   return;
 }
 function result(k,ms,info){
@@ -339,12 +350,12 @@ function hit(k, ms, info) {
 
  if (isFinePlayHit) {
   G.outs++;
-  banner('ファインプレー！！', 'hr');
+  banner('ファインプレー！！', 'fine');
   showDetailMsg('fine', ms, info);
   flight(to, 'fly', () => {
-   banner('ヒット性の当たりをもぎ取った！');
-   fin(1200);
-  }, 1, {diving: true});
+   banner('ヒット性の当たりをもぎ取った！', 'fine');
+   fin(CONFIG.finePlayLingerMs);
+  }, 1, {diving: true, finePlay: true});
   return;
  }
 

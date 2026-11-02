@@ -61,8 +61,11 @@ function fpos(i,now){const b=FD[i],f=G.fl;
  const dx=targetTo.x-HP.x,dy=targetTo.y-HP.y,k=Math.min(1,(R-14)/Math.hypot(dx,dy)),tx=HP.x+dx*k,ty=HP.y+dy*k,d=Math.hypot(tx-b[0],ty-b[1]);
  let T=d/FSPD;if(f.out)T=Math.min(T,f.dur*.92);
  const p=T>0?Math.min(1,(now-f.t0)/T):1,e=1-(1-p)*(1-p);
+ // ダイブ/スライドのランジは固定の斜め方向ではなく、着地点 (移動方向) へ体を投げ出す。
+ // 方向がズレるとボールと無関係な向きへ跳んで見えるため、移動の単位ベクトルに沿わせる。
  const dive=(f.diving&&p>.6)?Math.sin((p-.6)*2.5*P)*10:0;
- return[b[0]+(tx-b[0])*e+dive,b[1]+(ty-b[1])*e-dive]}
+ const slide=(f.sliding&&p>.6)?Math.sin((p-.6)/.4*P)*6:0;
+ return[b[0]+(tx-b[0])*e+(dive+slide)*(d>0?(tx-b[0])/d:0),b[1]+(ty-b[1])*e+(dive+slide)*(d>0?(ty-b[1])/d:0)]}
 
 function drawField(now){
  cx.drawImage(bg,0,0);
