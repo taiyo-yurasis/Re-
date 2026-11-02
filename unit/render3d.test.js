@@ -26,11 +26,9 @@ test('toWorld anchors home and maps outfield toward negative Z', () => {
   assert.ok(context.toWorld(240, 100).z < 0);
 });
 
-test('camera cycle includes all four stable modes', () => {
-  assert.equal(context.cameraModeNext('catcher'), 'wide');
-  assert.equal(context.cameraModeNext('wide'), 'overhead');
-  assert.equal(context.cameraModeNext('overhead'), 'auto');
-  assert.equal(context.cameraModeNext('auto'), 'catcher');
+test('camera cycle alternates between catcher and chase modes', () => {
+  assert.equal(context.cameraModeNext('catcher'), 'chase');
+  assert.equal(context.cameraModeNext('chase'), 'catcher');
   assert.equal(context.cameraModeNext('unknown'), 'catcher');
 });
 
@@ -85,5 +83,6 @@ test('fieldBallState prioritizes throws and follows the pitch clock', () => {
   assert.equal(thrown.x, 50);
   const pitch = context.fieldBallState({ phase: 'pitch', pitch: { t: .5 } }, 500);
   assert.equal(pitch.x, 240);
-  assert.equal(pitch.y, 331);
+  assert.equal(pitch.y, 340.5);
+  assert.equal(pitch.h, 18);
 });

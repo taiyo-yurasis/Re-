@@ -34,7 +34,7 @@ const CPU_DIFFICULTY = {
 
 /* ---- 固定ゲーム設定(バランス調整はここ) ---- */
 const CONFIG = {
- render3d: false,          // 3Dフィールド描画(開発中)。完成まではテスト環境(?3d=1 / localStorage yakyu-stadium-3d=test)限定で、完成時に true で全員へ公開する
+ render3d: true,           // 3Dフィールド描画(Ver.1.7.0で全員へ公開)。起動時は3D表示で始まり、画面右上のボタンで2D/3Dを切り替えられる
  batMode: 'physics',       // 'physics' = 打球物理モデル / 'table' = 従来の hitTable
  physicsCorrectionScale: 0.25, // 物理モデルでの球種ボーナス・遅れ補正の倍率
  courseIdealMs: 40,         // 内角は早め、外角は遅めを理想とするタイミング補正(ms)
@@ -59,6 +59,8 @@ const CONFIG = {
  cursorSize: 16,        // ミート判定: カーソルとボールの許容距離(px)
  finePlayFly: 0.22,     // フライがファインプレーになる確率
  finePlayHit: 0.05,     // 1B/2Bの当たりがファインプレーで取られる確率
+ finePlayLingerMs: 2000, // ファインプレーのときだけ次打席までの間を長くする(余韻・見た目のみ)
+ groundDiveRate: 0.2,   // 内野ゴロのアウト時、捕球する内野手(投手除く)がダイブ/スライド捕球する確率(見た目のみ)
  errorRate: 0.05,       // アウトになるはずのゴロ/フライが野手のエラーになる確率(打者は一塁セーフ・安打にはならない)
  infieldHitRate: 0.05,  // アウトになるはずのゴロが内野安打(セーフ)になる確率
 

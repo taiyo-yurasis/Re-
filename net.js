@@ -69,7 +69,7 @@ function curTick(){
 setInterval(curTick,100);
 function snap(){
  const n=performance.now(),p=G.pitch,f=G.fl;
- return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves},cur:snapCur(n)}
+ return {gid:G.gid,seq:++G.seq,hostTeam:G.me,inn:G.inn,top:G.top,outs:G.outs,cnt:G.cnt,bases:G.bases,runs:G.runs,hits:G.hits,pts:G.pts,N:G.N,ph:G.phase,bid:G.bid|0,bt:G.bt,wo:G.walkoff,m:$('msg').textContent,sw:n-G.swingT<400?n-G.swingT:null,pitcherHands:G.pitcherHands,batterSides:G.batterSides,p:p&&{id:p.id,type:p.type,x:p.x,y:p.y,dur:p.dur,sg:p.sg,age:n-p.t0,fr:G.phase==='pitch'?null:p.t},f:f&&{id:f.id,out:f.out,fi:f.fi,ri:f.ri,wall:f.wall,isHit:f.isHit,to:f.to,kind:f.kind,dur:f.dur,h:f.h,diving:f.diving,sliding:f.sliding,finePlay:f.finePlay,groundPlay:f.groundPlay,age:n-f.t0},mv:G.mv&&{id:G.mv.id,age:n-G.mv.t0,dur:G.mv.dur,moves:G.mv.moves,stay:G.mv.stay},th:G.th&&{id:G.th.id,age:n-G.th.t0,dur:G.th.dur,from:G.th.from,to:G.th.to,steps:G.th.steps},rl:G.rl&&{id:G.rl.id,age:n-G.rl.t0,moves:G.rl.moves},cur:snapCur(n)}
 }
 let lastSync=0;const sync=()=>{const n=performance.now();if(G.net==='host'&&G.gid&&n-lastSync>110){lastSync=n;send('snap',snap())}};
 setInterval(sync,200);
@@ -103,6 +103,8 @@ function validSnap(s){
   !point(s.f.to)||!numRange(s.f.dur,0.001,3600000)||!age(s.f.age)||
   (s.f.kind!=null&&typeof s.f.kind!=='string')||(s.f.out!=null&&typeof s.f.out!=='boolean')||
   (s.f.wall!=null&&typeof s.f.wall!=='boolean')||(s.f.diving!=null&&typeof s.f.diving!=='boolean')||
+  (s.f.sliding!=null&&typeof s.f.sliding!=='boolean')||(s.f.finePlay!=null&&typeof s.f.finePlay!=='boolean')||
+  (s.f.groundPlay!=null&&!['dive','slide'].includes(s.f.groundPlay))||
   (s.f.fi!=null&&!intRange(s.f.fi,0,FD.length-1))||(s.f.ri!=null&&!intRange(s.f.ri,0,FD.length-1))||
   (s.f.isHit!=null&&typeof s.f.isHit!=='boolean')||
   (s.f.h!=null&&!numRange(s.f.h,0,300))))return false;
