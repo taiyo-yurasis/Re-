@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const count = Math.max(1000, Number(process.env.SIM_PITCHES) || 30000);
 const seed0 = Number(process.env.SIM_SEED) || 20261023;
-const types = ['s', 'sl', 'c', 'f', 'sh', 'cu'];
+const types = ['s', 'sl', 'c', 'f', 'sh', 'cu', 'ct', 'ss'];
 
 function mulberry32(seed){
   return function(){
