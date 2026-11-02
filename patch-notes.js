@@ -1,7 +1,14 @@
 /* patch-notes.js — 公開済みアップデート履歴 */
 (() => {
-  const currentVersion = '1.6.5';
+  const currentVersion = '1.6.6';
   const updates = [
+    {
+      version: '1.6.6',
+      title: '開発用シミュレーションの対応球種を追加',
+      changes: [
+        '開発用の球種別シミュレーション（tuner）が、カットボールと超スローボールにも対応しました。ゲームの挙動に変更はありません。'
+      ]
+    },
     {
       version: '1.6.5',
       title: '3D表示の公開範囲を修正',
