@@ -46,7 +46,7 @@ function startHalf(){selectNextBatterSide();G.outs=0;G.bases=[0,0,0,0];G.cnt={b:
  const tbHalf=tiebreakOf(G)!=='off'&&G.inn>G.N;
  if(tbHalf)G.bases=[0,0,1,0]; // タイブレーク(MLB式): ノーアウト二塁から開始
  banner(tbHalf?`タイブレーク! ${G.inn}回${G.top?'表':'裏'}`:`${G.inn}回${G.top?'表':'裏'}`);updateHud();later(1300,ready)}
-function ready(){if(G.over)return;if(G.prac)selectNextBatterSide(0);G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
+function ready(){if(G.over)return;if(typeof hideBattedCard==='function')hideBattedCard();if(G.prac)selectNextBatterSide(0);G.fl=null;G.th=null;G.mv=null;G.rl=null;G.pitch=null;G.phase='ready';G.cur={x:110,y:110};updateHud();
  if(!G.net&&!pitHuman()){setMsg('ボールが届く位置にカーソルを置いて、届く瞬間に離してスイング!');
   later(rnd(700,1300),()=>{
    if(G.prac){const pp=pracPitch();return throwP(pp.t,pp.x,pp.y)}

@@ -22,6 +22,15 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 .fw.is-3d #f3d{opacity:1}
 #view-ctl{position:absolute;z-index:2;top:8px;right:8px;display:flex;gap:5px;pointer-events:auto}
 #view-ctl .bt{padding:5px 8px;font-size:11px;background:rgba(22,33,62,.88);backdrop-filter:blur(4px)}
+/* 打球データ表示 (C案): トグル (フィールド左上) と飛行中カード (左下) */
+#exp-ctl{position:absolute;z-index:2;top:8px;left:8px;display:flex;gap:5px}
+#exp-ctl .bt{padding:5px 8px;font-size:11px;background:rgba(22,33,62,.88);backdrop-filter:blur(4px)}
+#bcard{position:absolute;z-index:2;left:8px;bottom:8px;pointer-events:none;background:rgba(10,16,32,.87);border:1px solid var(--line);border-radius:10px;padding:6px 10px 7px;color:var(--ink);opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease;backdrop-filter:blur(3px)}
+#bcard.on{opacity:1;transform:none}
+#bcard .bc-spd{font-size:22px;font-weight:900;line-height:1.15;white-space:nowrap}
+#bcard .bc-spd small{font-size:11px;font-weight:700;color:var(--mut);margin-left:2px}
+#bcard .bc-sub{font-size:11px;color:var(--mut);margin-top:1px;white-space:nowrap}
+#bcard .bc-barrel{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;background:#ff5a5f;color:#fff;font-size:11px;font-weight:900;vertical-align:3px}
 #bn{position:absolute;z-index:3;left:0;right:0;top:34%;text-align:center;font-weight:900;font-size:30px;color:#fff;text-shadow:0 2px 0 #000,0 0 18px var(--acc);pointer-events:none;opacity:0}
 #bn.on{animation:pop 1.1s ease-out forwards}
 #bn.hr{font-size:40px;color:var(--acc)}
