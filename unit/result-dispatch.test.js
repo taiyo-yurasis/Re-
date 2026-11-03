@@ -11,7 +11,6 @@ const runnersSource = fs.readFileSync(path.join(root, 'runners.js'), 'utf8');
 function createPlaysContext() {
   const context = {
     G: { prac: false },
-    CONFIG: { batMode: 'table' },
     pracResult: () => 'practice',
     hit: () => 'hit'
   };
