@@ -76,7 +76,7 @@ function baseball(c,x,y,r,spin){
  c.rotate(angle+(axis==='vertical'?P/2:0));drawSeams();
  c.restore()
 }
-const FSPD=CONFIG.speed.fieldingPx;
+const FSPD=CONFIG.speed.runPx;
 function fpos(i,now){const b=FD[i],f=G.fl;
  if(G.rl){const m=G.rl.moves.find(q=>q.i===i);if(m){const e=Math.min(1,Math.max(0,(now-G.rl.t0)/m.T)),k=1-(1-e)*(1-e);return[b[0]+(m.x-b[0])*k,b[1]+(m.y-b[1])*k]}}
  if(!f||f.fi===undefined)return b;
