@@ -226,12 +226,15 @@ function resultFoul(ms,info){
   showDetailMsg('foul', ms, info);flight(to,'fly',()=>next(200));return
 }
 
-function resultGround(ms,info){
+function resultGround(ms,info,play){
  const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-35,35))*P/180,d=rnd(70,130);banner('ゴロ!');
-  const gto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
+  const gto=play&&play.to?play.to:{x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   const roll=Math.random();
   if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
-  if(roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
+  // 到達判定 (fielding.js) で結果が決まった打球は、内野安打の抽選を重ねない
+  // (内野安打は一塁送球との競争で既に判定されている)。エラーは従来どおり。
+  if(!(play&&play.resolved)&&roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
+  if(play&&play.forceSafe)return safeAtFirst('gr',gto,ms,true,info);
   const before=G.bases.slice();
   const loaded=!!(before[1]&&before[2]&&before[3]);
   // 満塁時のゴロ (アウトになる場合) は3パターンに分岐する:
@@ -274,7 +277,7 @@ function resultGround(ms,info){
   // 捕球時刻は dur の92%に丸められるため送球・判定のタイミングは変わらない)。
   const groundRolled=!dp&&homePlay!==3&&Math.random()<CONFIG.groundDiveRate;
   const groundPlay=groundRolled?(Math.random()<.5?'dive':'slide'):null;
-  const groundFiRaw=pickFielder(gto,'ground');
+  const groundFiRaw=play&&Number.isInteger(play.fi)?play.fi:pickFielder(gto,'ground');
   const groundFi=groundPlay&&!(groundFiRaw>=2&&groundFiRaw<=5)?nrst(gto,[2,3,4,5]):groundFiRaw;
   flight(gto,'ground',()=>{
    let m='ゴロアウト';
@@ -299,7 +302,7 @@ function resultGround(ms,info){
     }else G.th={id:++pid,t0:performance.now(),dur:thDur(G.fl.to,BS[1]),from:G.fl.to,to:BS[1]};
    }
    showDetailMsg('gr',ms,info);fin(800)
-  },1,groundPlay?{fi:groundFi,groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:null);
+  },1,(groundPlay||(play&&Number.isInteger(play.fi)))?{fi:groundFi,...(groundPlay?{groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:{})}:null);
   // ベースカバーの移動。送球が始まる前に動き出せるよう、打球の発生と同時に rl へ登録する。
   if(G.fl){
    const rlMoves=[];
@@ -334,11 +337,12 @@ function flyDistPx(info){
  return rnd(160,270);
 }
 
-function resultFly(ms,info){
+function resultFly(ms,info,play){
  const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=flyDistPx(info);banner('フライ!');
-  const fto={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
+  const fto=play&&play.to?play.to:{x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info);
-  const isFinePlay=Math.random()<CONFIG.finePlayFly;
+  // 到達判定で決まった打球は、ファインプレーかどうかも捕球の際どさ (到達比率) で決める
+  const isFinePlay=play&&play.resolved?!!play.finePlay:Math.random()<CONFIG.finePlayFly;
   if(G.outs===2){
    const targets={};
    for(let b=1;b<=3;b++)if(G.bases[b])targets[b]=b===3?3:b+1;
@@ -373,7 +377,7 @@ function resultFly(ms,info){
    if(scoredRuns){score(scoredRuns);banner(`+${scoredRuns}点!`);}
    showDetailMsg('fly',ms,info);
    fin(isFinePlay?CONFIG.finePlayLingerMs:1000);
-  },1,isFinePlay?{diving:true,finePlay:true}:null);
+  },1,isFinePlay?{diving:true,finePlay:true,...(play&&Number.isInteger(play.fi)?{fi:play.fi}:{})}:(play&&Number.isInteger(play.fi)?{fi:play.fi}:null));
   return;
 }
 /* 投球ボールの凍結と消去 (表示専用・判定には触らない)。
@@ -415,6 +419,17 @@ function result(k,ms,info){
  if(k==='ball')return resultBall(ms,info);
  if(k==='look'||k==='miss')return resultStrike(k,ms,info);
  if(k==='foul')return resultFoul(ms,info);
+ // 守備到達判定 (Ver.1.7.3): 物理モデルのインプレー打球は、抽選で決まった結果ではなく
+ // 野手の到達シミュレーション (fielding.js) で結果を決め直す。判定できない打球
+ // (テーブル方式・角度や速度が無い場合) は従来の経路に落とす。
+ if(typeof CONFIG!=='undefined'&&CONFIG.batMode==='physics'&&typeof resolveBattedBall==='function'&&['gr','fly','1B','2B','3B','HR'].includes(k)){
+  const play=resolveBattedBall(info);
+  if(play){
+   if(play.k==='gr')return resultGround(ms,info,play);
+   if(play.k==='fly')return resultFly(ms,info,play);
+   return hit(play.k,ms,info,play);
+  }
+ }
  if(k==='gr')return resultGround(ms,info);
  if(k==='fly')return resultFly(ms,info);
  return hit(k,ms,info);
@@ -422,18 +437,20 @@ function result(k,ms,info){
 
 function nrst(to,ids){let m=1e9,r=ids[0];ids.forEach(j=>{const q=Math.hypot(FD[j][0]-to.x,FD[j][1]-to.y);if(q<m){m=q;r=j}});return r}
 
-function hit(k, ms, info) {
+function hit(k, ms, info, play) {
  const n = {'1B':1, '2B':2, '3B':3, HR:4}[k];
  const a = (info&&info.angle!=null ? cl(info.angle,-44,44) : cl(cl(ms*.3,-38,38)+rnd(-9,9),-42,42))*P/180;
- 
+
  const edge = (k==='2B'||k==='3B')&&Math.abs(a)>=36*P/180;
- const wall = (k==='2B'||k==='3B')&&!edge;
- const ground = edge||(k==='1B'&&Math.random()<.5);
- 
- const d = wall ? R-8 : (k==='1B' ? rnd(190,230) : k==='2B' ? rnd(235,290) : k==='3B' ? rnd(295,312) : rnd(345,380));
- const to = {x: 240 + d * Math.sin(a), y: 375 - d * Math.cos(a)};
- 
- const isFinePlayHit = (k === '1B' || k === '2B') && Math.random() < CONFIG.finePlayHit;
+ // 到達判定の打球は、壁直撃かどうか・ゴロかどうか・回収位置を判定結果から引き継ぐ
+ const wall = play&&play.resolved ? !!play.wall : (k==='2B'||k==='3B')&&!edge;
+ const ground = play&&play.resolved ? !!play.ground : edge||(k==='1B'&&Math.random()<.5);
+
+ const d = wall&&!(play&&play.to) ? R-8 : (k==='1B' ? rnd(190,230) : k==='2B' ? rnd(235,290) : k==='3B' ? rnd(295,312) : rnd(345,380));
+ const to = play&&play.to ? play.to : {x: 240 + d * Math.sin(a), y: 375 - d * Math.cos(a)};
+
+ // 到達判定で決まった安打は、ファインプレー抽選で覆らない (好捕は判定側で決まる)
+ const isFinePlayHit = !(play&&play.resolved) && (k === '1B' || k === '2B') && Math.random() < CONFIG.finePlayHit;
 
  if (isFinePlayHit) {
   G.outs++;
@@ -453,7 +470,7 @@ function hit(k, ms, info) {
  const batTeam=G.top?0:1;
  const hitPts=k==='1B'?300:k==='2B'?600:k==='3B'?1000:[1200,1500,2000,2500][Math.min(4,Math.max(1,r))-1];
  addMatchPts(batTeam,hitPts+300*r);
- const o = edge ? {fi: nrst(to, [6, 8]), ri: nrst(to, [2, 5])} : k === '1B' ? {fi: nrst(to, [6, 7, 8]), ...(ground ? {ri: nrst(to, [0, 2, 3, 4, 5])} : {h: 22})} : (k === '2B' || k === '3B') ? {fi: nrst(to, [6, 7, 8]), wall} : null;
+ const o = play&&Number.isInteger(play.fi) ? {fi: play.fi, ...(play.ground?{ri: nrst(to, [0, 2, 3, 4, 5])}:k==='1B'?{h: 22}:{}) , ...(wall?{wall:true}:{})} : edge ? {fi: nrst(to, [6, 8]), ri: nrst(to, [2, 5])} : k === '1B' ? {fi: nrst(to, [6, 7, 8]), ...(ground ? {ri: nrst(to, [0, 2, 3, 4, 5])} : {h: 22})} : (k === '2B' || k === '3B') ? {fi: nrst(to, [6, 7, 8]), wall} : null;
  G.hits[G.top ? 0 : 1]++;
  banner({'1B':'ヒット!','2B':'ツーベース!','3B':'スリーベース!',HR:'ホームラン!!'}[k], k==='HR'?'hr':'');
  showDetailMsg(k, ms, info);
