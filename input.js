@@ -1,7 +1,7 @@
 /* input.js — 入力(ポインタ/キー)とタイトル画面のボタン */
 /* ---- input ---- */
 const setCur=(x,y)=>{G.cur.x=cl(x,0,220);G.cur.y=cl(y,0,220)};
-const zpt=e=>{const r=zc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*220,(e.clientY-r.top)/r.height*220]};
+const zpt=e=>{const r=zc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*zc.width,(e.clientY-r.top)/r.height*zc.height]};
 const fpt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*220,(e.clientY-r.top)/r.height*220]};
 
 function act(){if(G.phase==='aim'){if(pitHuman())pitchNow()}else swing()}
@@ -31,7 +31,7 @@ touchArea.addEventListener('pointerdown',e=>{
 });
 touchArea.addEventListener('pointermove',e=>{
  if(e.pointerType==='mouse'||!lastT)return;
- const k=220/zc.getBoundingClientRect().width*1.6;
+ const k=zc.width/zc.getBoundingClientRect().width*1.6;
  setCur(G.cur.x+(e.clientX-lastT[0])*k, G.cur.y+(e.clientY-lastT[1])*k);
  lastT=[e.clientX,e.clientY];
 });

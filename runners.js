@@ -29,6 +29,6 @@ function settle(targets,batterTarget=null,opts={}){
 function applyRunnerResult(result,duration){
  G.bases=result.bases;
  const now=performance.now();
- const dur=duration??Math.max(0,...result.moves.map(m=>m.T??(m.b-m.a)*580));
+ const dur=duration??Math.max(0,...result.moves.map(m=>m.T??(m.b-m.a)*CONFIG.speed.runnerMsPerBase));
  G.mv=result.moves.length?{id:++pid,t0:now,dur,moves:result.moves,stay:result.stay}:null;
 }

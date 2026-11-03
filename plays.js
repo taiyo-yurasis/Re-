@@ -18,13 +18,14 @@ function throwPlan(to, targetBase, fi){
  const tp = targetBase === 4 ? {x: HP.x, y: HP.y} : {x: BS[targetBase].x, y: BS[targetBase].y};
  const L = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
  const rm = relayMan(fi, to, targetBase), relay = rm !== 0 && Math.random() < .5;
- const cov = targetBase === 2 ? 4 : targetBase === 3 ? 5 : 1, mv = [], sp = .55;
+ // 送球速度とカバー走は CONFIG.speed に統一 (送球は距離比例、カバーは走者と同等の足の速さ)
+ const cov = targetBase === 2 ? 4 : targetBase === 3 ? 5 : 1, mv = [], sp = CONFIG.speed.throwPx, runSp = CONFIG.speed.runPx;
  let R = null;
- if(relay){R = {x: tp.x + (to.x - tp.x) * .4, y: tp.y + (to.y - tp.y) * .4}; mv.push({i: rm, x: R.x, y: R.y, T: Math.max(500, Math.hypot(FD[rm][0] - R.x, FD[rm][1] - R.y) / .1)})}
- if(cov !== 1) mv.push({i: cov, x: tp.x, y: tp.y, T: Math.max(500, Math.hypot(FD[cov][0] - tp.x, FD[cov][1] - tp.y) / .1)});
+ if(relay){R = {x: tp.x + (to.x - tp.x) * .4, y: tp.y + (to.y - tp.y) * .4}; mv.push({i: rm, x: R.x, y: R.y, T: Math.max(500, Math.hypot(FD[rm][0] - R.x, FD[rm][1] - R.y) / runSp)})}
+ if(cov !== 1) mv.push({i: cov, x: tp.x, y: tp.y, T: Math.max(500, Math.hypot(FD[cov][0] - tp.x, FD[cov][1] - tp.y) / runSp)});
  // 本塁への送球では、中継に入らない方の二遊間が二塁をカバーする
- if(targetBase === 4 && rm !== 0){const c2 = rm === 3 ? 4 : 3; mv.push({i: c2, x: BS[2].x, y: BS[2].y, T: Math.max(500, Math.hypot(FD[c2][0] - BS[2].x, FD[c2][1] - BS[2].y) / .1)})}
- const steps = R ? [{from: to, to: R, dur: Math.max(220, L(to, R) / sp)}, {from: R, to: tp, dur: Math.max(200, L(R, tp) / sp), dly: 150}] : [{from: to, to: tp, dur: Math.max(250, L(to, tp) / sp)}];
+ if(targetBase === 4 && rm !== 0){const c2 = rm === 3 ? 4 : 3; mv.push({i: c2, x: BS[2].x, y: BS[2].y, T: Math.max(500, Math.hypot(FD[c2][0] - BS[2].x, FD[c2][1] - BS[2].y) / runSp)})}
+ const steps = R ? [{from: to, to: R, dur: Math.max(200, L(to, R) / sp)}, {from: R, to: tp, dur: Math.max(180, L(R, tp) / sp), dly: CONFIG.speed.relayWaitMs}] : [{from: to, to: tp, dur: Math.max(220, L(to, tp) / sp)}];
  return {steps, mv};
 }
 
@@ -104,7 +105,7 @@ function score(r){if(!r)return;G.runs[G.top?0:1][G.inn-1]+=r;
  if(!G.top&&G.inn>=G.N&&tot(1)>tot(0))G.walkoff=true;updateHud()}
 function rpos(a,b,p){const Q=[HP,BS[1],BS[2],BS[3],HP],L=[];let T=0;for(let i=a;i<b;i++){const l=Math.hypot(Q[i+1].x-Q[i].x,Q[i+1].y-Q[i].y);L.push(l);T+=l}
  let d=T*p;for(let i=a;i<b;i++){const l=L[i-a];if(d<=l||i===b-1){const t=l?Math.min(1,d/l):1;return[Q[i].x+(Q[i+1].x-Q[i].x)*t,Q[i].y+(Q[i+1].y-Q[i].y)*t]}d-=l}}
-function mvAdd(m){const t=performance.now();if(!G.mv||t-G.mv.t0>G.mv.dur)G.mv={id:++pid,t0:t,dur:0,moves:[],stay:[1,2,3].filter(b=>G.bases[b])};G.mv.moves.push(m);G.mv.dur=Math.max(G.mv.dur,m.T||(m.b-m.a)*580)}
+function mvAdd(m){const t=performance.now();if(!G.mv||t-G.mv.t0>G.mv.dur)G.mv={id:++pid,t0:t,dur:0,moves:[],stay:[1,2,3].filter(b=>G.bases[b])};G.mv.moves.push(m);G.mv.dur=Math.max(G.mv.dur,m.T||(m.b-m.a)*CONFIG.speed.runnerMsPerBase)}
 
 function adv(n,bat){
  const targets={};
@@ -129,7 +130,8 @@ function forceAdv(T){
 // ゴロは野手がもたつく(送球が遅れる)ので、走者が先に一塁へ着く
 function safeAtFirst(kind,to,ms,isHit,info){
  const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y),F=ground?300+d*3.2:500+d*2.6;
- const T=F+(ground?630:500),r=forceAdv(T);
+ // 走者の足は CONFIG.speed.runnerMsPerBase に揃える (打球の飛行より速く塁に着くことはない範囲で)
+ const T=Math.max(CONFIG.speed.runnerMsPerBase,F+(ground?250:0)),r=forceAdv(T);
  flight(to,ground?'ground':'fly',()=>{
   if(isHit){G.hits[G.top?0:1]++;addMatchPts(G.top?0:1,300+300*r);banner('内野安打!');showDetailMsg('ih',ms,info)}
   else{banner('エラー!');showDetailMsg('err',ms,info)}
@@ -157,7 +159,7 @@ function advRand(kind,bat){
 }
 
 function walk(){
- const r=forceAdv(580);
+ const r=forceAdv(CONFIG.speed.runnerMsPerBase);
  addMatchPts(G.top?0:1,50+300*r);score(r);if(r)banner(`+${r}点!`)
 }
 
@@ -283,15 +285,18 @@ function resultGround(ms,info){
    banner(m);
    if(r)banner(`+${r}点!`);
    if(G.fl){
+    // 送球時間は距離比例 (CONFIG.speed.throwPx)。旧仕様は距離によらず380/250ms固定で、
+    // 近い送球と遠い送球が同じ速さに見えていた
+    const thDur=(a,b)=>Math.max(200,Math.hypot(a.x-b.x,a.y-b.y)/CONFIG.speed.throwPx);
     if(homePlay===1){
-     G.th={id:++pid,t0:performance.now(),dur:380,from:G.fl.to,to:HP};
+     G.th={id:++pid,t0:performance.now(),dur:thDur(G.fl.to,HP),from:G.fl.to,to:HP};
     }else if(homePlay===3){
-     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:HP,dur:380},{from:HP,to:BS[1],dur:250}],currentStep:0};
+     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:HP,dur:thDur(G.fl.to,HP)},{from:HP,to:BS[1],dur:thDur(HP,BS[1])}],currentStep:0};
     }else if(dp){
      // 案B(捕球した二遊間が二塁の近くで捕球)では、1段目は送球ではなくボールを持って二塁へ走る
-     const self=G.fl.dpSelf,carryDur=self?Math.max(250,Math.hypot(G.fl.to.x-BS[2].x,G.fl.to.y-BS[2].y)/.12):250;
-     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[2],dur:carryDur,...(self?{carry:true}:{})},{from:BS[2],to:BS[1],dur:250}],currentStep:0};
-    }else G.th={id:++pid,t0:performance.now(),dur:380,from:G.fl.to,to:BS[1]};
+     const self=G.fl.dpSelf,carryDur=self?Math.max(250,Math.hypot(G.fl.to.x-BS[2].x,G.fl.to.y-BS[2].y)/CONFIG.speed.runPx):250;
+     G.th={id:++pid,t0:performance.now(),steps:[{from:G.fl.to,to:BS[2],dur:carryDur,...(self?{carry:true}:{})},{from:BS[2],to:BS[1],dur:thDur(BS[2],BS[1])}],currentStep:0};
+    }else G.th={id:++pid,t0:performance.now(),dur:thDur(G.fl.to,BS[1]),from:G.fl.to,to:BS[1]};
    }
    showDetailMsg('gr',ms,info);fin(800)
   },1,groundPlay?{fi:groundFi,groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:null);
@@ -302,7 +307,7 @@ function resultGround(ms,info){
    // (本塁アウトのパターンは一塁への送球がないのでカバー不要)
    if(G.fl.fi===2&&homePlay!==1){
     const from={x:FD[0][0],y:FD[0][1]},to=BS[1];
-    rlMoves.push({i:0,x:to.x,y:to.y,T:Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/.12)});
+    rlMoves.push({i:0,x:to.x,y:to.y,T:Math.max(250,Math.hypot(from.x-to.x,from.y-to.y)/CONFIG.speed.runPx)});
    }
    if(dp){
     const fi=G.fl.fi;
@@ -312,12 +317,13 @@ function resultGround(ms,info){
     }else{
      // 案A: 相方の二遊間(投手の捕球時は二塁に近い方)が二塁をカバーする
      const cov=fi===3?4:fi===4?3:fi===5?4:fi===2?3:nrst(BS[2],[3,4]);
-     rlMoves.push({i:cov,x:BS[2].x,y:BS[2].y,T:Math.max(250,Math.hypot(FD[cov][0]-BS[2].x,FD[cov][1]-BS[2].y)/.12)});
+     rlMoves.push({i:cov,x:BS[2].x,y:BS[2].y,T:Math.max(250,Math.hypot(FD[cov][0]-BS[2].x,FD[cov][1]-BS[2].y)/CONFIG.speed.runPx)});
     }
    }
    if(rlMoves.length)G.rl={id:++pid,t0:performance.now(),moves:rlMoves};
   }
-  const o=G.fl.dur+250+380;mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});if(homePlay===1||homePlay===3)mvAdd({a:3,b:4,T:o+100,o});return
+  // 打者走者の表示タイミングは「打球飛行+捕球後の間+一塁送球 (距離比例)」に合わせる
+  const o=G.fl.dur+250+Math.max(200,Math.hypot(gto.x-BS[1].x,gto.y-BS[1].y)/CONFIG.speed.throwPx);mvAdd({a:0,b:1,T:o+100,o});if(dp)mvAdd({a:1,b:2,T:o+100,o});if(homePlay===1||homePlay===3)mvAdd({a:3,b:4,T:o+100,o});return
 }
 
 // フライの飛距離(px)。物理モデルは飛距離(m)を返すので、描画と犠飛判定の尺度(px)に換算する。
@@ -352,6 +358,16 @@ function resultFly(ms,info){
     applyRunnerResult(runnerResult);
     if(sacFly){addMatchPts(G.top?0:1,450);scoredRuns=runnerResult.runs;m='犠牲フライ!'}
     else if(tagUpSecond)m='タッチアップ!';
+    // 見た目だけの送球(タッチアップ成立時): 判定・進塁・得点は上で確定済みで、ここでは触らない。
+    // 犠飛は本塁へ、二塁走者のタッチアップは三塁へ。ボールは1個なので両方成立したら本塁を優先。
+    // 捕球後200ms置いてから放物線で飛ばし、捕手/三塁手の位置に収める。2D(drawTh)と3D(fieldBallState)が
+    // 同じ G.th.steps を描くので両表示で見える。dly+dur+fin側の余裕400ms が fin(1000) の枠に収まる
+    // 速度(深い打球ほど送球距離が長い分だけ速く)にし、次打席への移行タイミングは従来どおりにする。
+    const throwTo=sacFly?HP:tagUpSecond?BS[3]:null;
+    if(throwTo){
+     const from={x:fto.x,y:fto.y},distTo=Math.hypot(throwTo.x-from.x,throwTo.y-from.y);
+     G.th={id:++pid,t0:performance.now(),steps:[{from,to:{x:throwTo.x,y:throwTo.y},dur:cl(Math.round(distTo/CONFIG.speed.throwPx),240,900),dly:200}]};
+    }
    }
    banner(m,isFinePlay?'fine':'');
    if(scoredRuns){score(scoredRuns);banner(`+${scoredRuns}点!`);}
@@ -360,7 +376,34 @@ function resultFly(ms,info){
   },1,isFinePlay?{diving:true,finePlay:true}:null);
   return;
 }
+/* 投球ボールの凍結と消去 (表示専用・判定には触らない)。
+   空振り (Taiyo 指示 2026-11-03): 空ぶった瞬間に、球をその位置で止め、
+   少し経ったら消す。「少し」は 350ms とする。ただし捕手視点ゾーン板 ON 時の
+   3D 球だけは例外で、凍結せず着弾・空振りの瞬間に即時消去する
+   (fieldBallState の fpRay 分岐。板の円盤からはみ出すのを防ぐため)。
+   板/パネルの球と板 OFF 時の 3D 球はこの凍結+350ms の規則どおり。
+   (スイングのフォロースルー 230〜370ms が終わる頃で、ストライクコール後の
+   次球準備 800ms より前に消える長さ)。凍結位置は、その時点で各描画が
+   使っていた p.t (人間スイング=スイング時刻、CPU 打者=判定時刻の値) を
+   そのまま使うので、板・パネル・3D が同じ位置で止まる。
+   見逃し/到達後: 到達した球は到達点に留まり、到達 +280ms で消える。
+   消去の判定は位相 (phase) に依存させない: 旧方式は busy のときだけ
+   +280ms で消していたため、到達からコール確定までの pitch 位相の窓や
+   コール後の滞留など、位相が想定と違う経路では消えずに残る余地があった。
+   pitchBallGone は pitch オブジェクトが生きている全位相で同じ規則を返す。 */
+const PITCH_FREEZE_HIDE_MS=350;
+function freezePitchBall(){
+ const p=G.pitch;if(!p||p.frozenT!=null)return;
+ p.frozenT=cl(Number.isFinite(p.t)?p.t:0,0,1);
+ p.hideAt=performance.now()+PITCH_FREEZE_HIDE_MS;
+}
+function pitchBallGone(p,now){
+ if(!p)return true;
+ if(p.frozenT!=null)return now>=p.hideAt;
+ return Number.isFinite(p.t0)&&Number.isFinite(p.dur)&&now>p.t0+p.dur+280;
+}
 function result(k,ms,info){
+ if(k==='miss')freezePitchBall();
  if(G.prac)return pracResult(k,ms,info);
  // 打球データ表示: インプレー打球なら飛行中カード用データを控える (flight() が消費する)。
  // 表示可否は BATTED_EXP.enabled を表示側 (カード・結果行・ゲスト受信側) で見るので、
