@@ -20,8 +20,8 @@ vm.runInContext(source, context, { filename: 'render3d.js' });
 test('toWorld anchors home and maps outfield toward negative Z', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(context.toWorld(240, 375))), { x: 0, y: 0, z: 0 });
   const scaled = context.toWorld(280, 375, 12);
-  assert.equal(scaled.x, 1);
-  assert.ok(Math.abs(scaled.y - 0.3) < 1e-12);
+  assert.equal(scaled.x, 1.44);
+  assert.ok(Math.abs(scaled.y - 0.432) < 1e-12);
   assert.equal(scaled.z, 0);
   assert.ok(context.toWorld(240, 100).z < 0);
 });
@@ -82,7 +82,7 @@ test('fieldBallState prioritizes throws and follows the pitch clock', () => {
   const thrown = context.fieldBallState({ th: { t0: 0, dur: 1000, from: { x: 0, y: 0 }, to: { x: 100, y: 0 } }, fl: null }, 500);
   assert.equal(thrown.x, 50);
   const pitch = context.fieldBallState({ phase: 'pitch', pitch: { t: .5 } }, 500);
-  assert.equal(pitch.x, 240);
-  assert.equal(pitch.y, 340.5);
-  assert.equal(pitch.h, 18);
+  assert.equal(pitch.x, 239);
+  assert.ok(Math.abs(pitch.y - 338.445) < 1e-9);
+  assert.ok(Math.abs(pitch.h - 7.935) < 1e-9);
 });

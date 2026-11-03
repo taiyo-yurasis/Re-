@@ -13,11 +13,41 @@ function paintBg(){const g=bgx;
  for(let r=R-16,i=0;r>0;r-=24,i++){wd(r);g.fillStyle=i%2?'#2e9a4c':'#38b25a';g.fill()}
  g.save();wd(R-16);g.clip();g.fillStyle='#c88b52';g.beginPath();g.arc(240,300,108,0,2*P);g.fill();g.restore();
  g.fillStyle='#38b25a';g.beginPath();[[240,354],[290,304],[240,256],[190,304]].forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.fill();
- g.fillStyle='#c88b52';g.beginPath();g.arc(240,372,26,0,2*P);g.fill();
+ g.fillStyle='#c88b52';g.beginPath();g.arc(240,370,35,0,2*P);g.fill();
  g.fillStyle='#d9a066';g.beginPath();g.arc(240,292,13,0,2*P);g.fill();
- g.strokeStyle='#fff';g.lineWidth=2;[-1,1].forEach(s=>{g.beginPath();g.moveTo(240,375);g.lineTo(240+s*(R+6)*.7071,375-(R+6)*.7071);g.stroke()});
+ // ファウルライン: 実物の実務どおり、バッターボックスの区間はチョークを引かず途切れさせ、
+ // ボックスを過ぎた所から再開する (概念上のライン自体は本塁頂点から真っ直ぐ延びる)。
+ g.strokeStyle='#fff';g.lineWidth=2.5;[-1,1].forEach(s=>{g.beginPath();g.moveTo(240+s*37,338);g.lineTo(240+s*(R+6)*.7071,375-(R+6)*.7071);g.stroke()});
  g.strokeStyle='#ffd23f';g.lineWidth=4;g.beginPath();g.arc(240,375,R+6,-.75*P,-.25*P);g.stroke();
- g.fillStyle='#fff';BS.slice(1).forEach(b=>g.fillRect(b.x-6,b.y-6,12,12));g.fillRect(235,370,10,8);
+ g.fillStyle='#fff';BS.slice(1).forEach(b=>g.fillRect(b.x-6,b.y-6,12,12));
+ // 本塁は長方形ではなく五角形 (公認野球規則: 投手側の前面17インチ=43.2cm、ファウルラインに沿う2辺が
+ // 8.5インチ、その先の2辺が12インチで90°の頂点を作る)。頂点 (捕手側の尖り) を HP (240,375) に置き、
+ // 塁 (12px≒38cm) との比率で幅・奥行きとも約13.6px にする。縁は黒いベベルとして一回り大きく下に敷く。
+ const platePts=[[240,375],[233.2,368.2],[233.2,361.4],[246.8,361.4],[246.8,368.2]];
+ const platePath=(pts)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath()};
+ platePath([[240,376.6],[232.2,368.2],[232.2,360.2],[247.8,360.2],[247.8,368.2]]);g.fillStyle='#22242a';g.fill();
+ platePath(platePts);g.fillStyle='#fff';g.fill();
+ // バッターボックス (左右): 選手身長 H=57px (塁12px=38.1cm の実寸スケール換算) を単位とする実物比率。
+ // 長さ1.011H (実物6フィート) ×幅0.674H (同4フィート)、本塁の平行辺から0.084H (同6インチ) 離し、
+ // 長手方向の中心は本塁の肩ライン (前面から8.5インチ後方 = y368.2) に一致させる。
+ // 実物の実務どおり内側ライン (本塁寄りの長辺) は引かない (外側・前・後の3辺だけ)。
+ // 打者ドット (219/261, 370) はボックス内に収まる。
+ g.strokeStyle='#fff';g.lineWidth=2.5;
+ const bbW=.674*57,bbL=1.011*57,bbGap=.084*57,bbCy=368.2;
+ for(const s of [-1,1]){
+  const innerX=240+s*(6.8+bbGap),outerX=innerX+s*bbW,y0=bbCy-bbL/2,y1=bbCy+bbL/2;
+  g.beginPath();
+  g.moveTo(outerX,y0);g.lineTo(outerX,y1);
+  g.moveTo(innerX,y0);g.lineTo(outerX,y0);
+  g.moveTo(innerX,y1);g.lineTo(outerX,y1);
+  g.stroke();
+ }
+ // キャッチャーボックス: 幅0.604H×長さ1.348H、後端は本塁頂点の1.348H後方。
+ // 2D盤面では本塁後方が盤外にはみ出すため、側線だけを盤の端まで引く (前面は実務でも閉じない)。
+ g.beginPath();
+ g.moveTo(240-.302*57,375);g.lineTo(240-.302*57,400);
+ g.moveTo(240+.302*57,375);g.lineTo(240+.302*57,400);
+ g.stroke();
  [[30,26],[450,26]].forEach(([x,y])=>{const r=g.createRadialGradient(x,y,0,x,y,70);r.addColorStop(0,'rgba(255,245,200,.9)');r.addColorStop(1,'rgba(255,245,200,0)');g.fillStyle=r;g.fillRect(x-70,y-70,140,140)});
 }
 // 背面タブのキャンバスは iOS Safari に破棄されることがあり、一度だけ描く bg は
@@ -46,7 +76,7 @@ function baseball(c,x,y,r,spin){
  c.rotate(angle+(axis==='vertical'?P/2:0));drawSeams();
  c.restore()
 }
-const FSPD=.07;
+const FSPD=CONFIG.speed.runPx;
 function fpos(i,now){const b=FD[i],f=G.fl;
  if(G.rl){const m=G.rl.moves.find(q=>q.i===i);if(m){const e=Math.min(1,Math.max(0,(now-G.rl.t0)/m.T)),k=1-(1-e)*(1-e);return[b[0]+(m.x-b[0])*k,b[1]+(m.y-b[1])*k]}}
  if(!f||f.fi===undefined)return b;
@@ -69,11 +99,24 @@ function fpos(i,now){const b=FD[i],f=G.fl;
 
 function drawField(now){
  cx.drawImage(bg,0,0);
+ // 球審 (本塁審): 黒いシャツ+チャコールグレーのズボン、マスク着用。立ち位置は捕手の真後ろ
+ // (本塁の中心線上、横ずれなし。実物のスロットは Taiyo 指示により採用しない)。
+ // 捕手より先に描くことで、捕手のドットに少し隠れる「後ろにいる」奥行きも出す。
+ // 姿勢 (深くしゃがまず、立って上体を倒す) は3D側で表現する。
+ // 右腰のボールバッグは球審だけの装備 (実物どおり右側に1つ)。
+ {
+  const ux=240,uy=395;
+  cx.fillStyle='#26262c';cx.fillRect(ux+4.5,uy+1,5,6.5);
+  cx.strokeStyle='rgba(255,255,255,.4)';cx.lineWidth=1;cx.strokeRect(ux+4.5,uy+1,5,6.5);
+  dot(ux,uy,6.5,'#17181d','#3b4048');
+  cx.fillStyle='#2c313a';cx.fillRect(ux-2.5,uy-6.8,5,3.2); // マスク (投手側の顔前面)
+  cx.fillStyle='#2c313a';cx.fillRect(ux-1,uy-3.4,2,2.2);   // スロートガード
+ }
  const bt=G.top?0:1;
  FD.forEach((_,i)=>{const[x,y]=fpos(i,now);dot(x,y,6,TC[1-bt],'#fff')});
  const mv=G.mv&&now-G.mv.t0<G.mv.dur?G.mv:null,bm=!!mv&&mv.moves.some(m=>m.a===0);
  const rd=(x,y)=>{cx.save();cx.shadowColor=TC[bt];cx.shadowBlur=14;dot(x,y,8,TC[bt],'#fff');cx.restore()};
- if(mv){mv.stay.forEach(b=>rd(BS[b].x,BS[b].y));mv.moves.forEach(m=>{const el=now-mv.t0;if(m.o&&el>=m.o)return;const q=rpos(m.a,m.b,Math.min(1,el/(m.T||550*(m.b-m.a))));rd(q[0],q[1])})}
+ if(mv){mv.stay.forEach(b=>rd(BS[b].x,BS[b].y));mv.moves.forEach(m=>{const el=now-mv.t0;if(m.o&&el>=m.o)return;const q=rpos(m.a,m.b,Math.min(1,el/(m.T||CONFIG.speed.runnerMsPerBase*(m.b-m.a))));rd(q[0],q[1])})}
  else for(let b=1;b<4;b++)if(G.bases&&G.bases[b])rd(BS[b].x,BS[b].y);
  
  const batterSide = G.batterSides ? G.batterSides[G.top ? 0 : 1] : 'right';
@@ -101,6 +144,27 @@ function drawField(now){
   dot(x,y-h,4+h/25,'#fff','#c33')}
  
  if(G.th)drawTh(now);
+ drawCatchFx(now);
+}
+// 捕球の瞬間の閃光と土煙 (2D)。3D側のエフェクトと同じ発生条件・タイミングで、表示を切り替えても見えるようにする。
+// 粒の配置は黄金角で決定的に散らす (フレームごとに乱数を使うとちらつくため)。
+function drawCatchFx(now){
+ const f=G.fl;if(!f||!(f.finePlay||f.groundPlay))return;
+ const e=now-(f.t0+f.dur),dur=f.finePlay?750:550;
+ if(e<0||e>dur)return;
+ const k=e/dur,x=f.to.x,y=f.to.y;
+ if(f.finePlay&&e<250){
+  // 閃光は小さく・薄く・短く (3D側と同方針): 半径は最大15px、250msで消える。
+  const fk=e/250,r=6+fk*9;
+  const gr=cx.createRadialGradient(x,y,0,x,y,r);
+  gr.addColorStop(0,`rgba(255,244,170,${.55*(1-fk)})`);gr.addColorStop(1,'rgba(255,244,170,0)');
+  cx.fillStyle=gr;cx.beginPath();cx.arc(x,y,r,0,7);cx.fill();
+ }
+ const n=f.finePlay?14:9,spread=f.finePlay?20:13;
+ for(let i=0;i<n;i++){
+  const ang=i*2.399,dist=(4+((i*7)%5)*3)*k+spread*k*((i%3)/2),px=x+Math.cos(ang)*dist,py=y+Math.sin(ang)*dist*.55-k*5,pr=(2.5+k*4)*(1-k*.4);
+  cx.fillStyle=`rgba(176,137,84,${.5*(1-k)})`;cx.beginPath();cx.ellipse(px,py,pr,pr*.6,0,0,7);cx.fill();
+ }
 }
 
 function drawTh(now){const t=G.th;
@@ -146,13 +210,15 @@ function drawSpecCursors(c){
  }
 }
 function drawZone(){const u=44,c=zx;
- c.fillStyle='#0f1a33';c.fillRect(0,0,220,220);
+ c.fillStyle='#0f1a33';c.fillRect(0,0,zc.width,zc.height);
  c.strokeStyle='#1f2f58';c.lineWidth=1;
  for(let i=1;i<5;i++){c.beginPath();c.moveTo(i*u,0);c.lineTo(i*u,220);c.moveTo(0,i*u);c.lineTo(220,i*u);c.stroke()}
- 
+
  c.strokeStyle='#ffd23f';c.lineWidth=3;c.strokeRect(u,u,3*u,3*u);
  const p=G.pitch;
- if(p&&(G.phase==='pitch'||G.phase==='busy')){const t=cl(p.t,0,1.2),[x,y]=bp(p,t),r=3+16*Math.min(t,1.1);
+ // 空振り時は p.t がスイング時点で凍るので球はその位置に止まる。凍結から
+ // PITCH_FREEZE_HIDE_MS 経ったら、3D/板の球と同時にパネルの球も消す。
+ if(p&&(G.phase==='pitch'||G.phase==='busy')&&!(p.frozenT!=null&&performance.now()>=p.hideAt)){const t=cl(p.t,0,1.2),[x,y]=bp(p,t),r=3+16*Math.min(t,1.1);
   c.strokeStyle='rgba(255,210,63,.6)';c.lineWidth=2;c.beginPath();c.arc(x,y,19,0,7);c.stroke();
   baseball(c,x,y,r,spinState(p,t))}
  

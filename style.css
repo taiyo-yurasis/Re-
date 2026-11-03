@@ -23,7 +23,7 @@ canvas{display:block;width:100%;height:auto;border-radius:12px}
 #view-ctl{position:absolute;z-index:2;top:8px;right:8px;display:flex;gap:5px;pointer-events:auto}
 #view-ctl .bt{padding:5px 8px;font-size:11px;background:rgba(22,33,62,.88);backdrop-filter:blur(4px)}
 /* 打球データ表示 (C案): トグル (フィールド左上) と飛行中カード (左下) */
-#exp-ctl{position:absolute;z-index:2;top:8px;left:8px;display:flex;gap:5px}
+#exp-ctl{position:absolute;z-index:2;top:8px;left:8px;display:flex;gap:5px;flex-wrap:wrap;max-width:62%}
 #exp-ctl .bt{padding:5px 8px;font-size:11px;background:rgba(22,33,62,.88);backdrop-filter:blur(4px)}
 #bcard{position:absolute;z-index:2;left:8px;bottom:8px;pointer-events:none;background:rgba(10,16,32,.87);border:1px solid var(--line);border-radius:10px;padding:6px 10px 7px;color:var(--ink);opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease;backdrop-filter:blur(3px)}
 #bcard.on{opacity:1;transform:none}
