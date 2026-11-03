@@ -79,7 +79,7 @@ function simulate(mode, seed){
           target.ground++;
           if(r.k==='1B')target.groundHit++;
         }
-        // 守備到達判定 (Ver.1.8.0): インプレー打球を fielding.js で決め直した分布
+        // 守備到達判定 (Ver.1.7.3): インプレー打球を fielding.js で決め直した分布
         if(mode==='physics'&&typeof context.resolveBattedBall==='function'){
           const play=context.resolveBattedBall(r);
           if(play){
@@ -121,7 +121,7 @@ console.log('各モード '+count.toLocaleString()+' 球、ゾーン一様、タ
 printStats('物理モデル',physics.stats);
 if(physics.stats.rInPlay){
  const s=physics.stats;
- console.log('\n物理モデル + 守備到達判定 (Ver.1.8.0)');
+ console.log('\n物理モデル + 守備到達判定 (Ver.1.7.3)');
  console.log('全投球HR率: '+pct(s.rHr||0,s.total));
  console.log('インプレー打率: '+avg(s.rHit||0,s.rInPlay)+'  ('+(s.rHit||0)+'/'+s.rInPlay+')');
  console.log('フライアウト率/フライ: '+pct(s.rFlyOut||0,s.air));

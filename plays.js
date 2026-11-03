@@ -419,7 +419,7 @@ function result(k,ms,info){
  if(k==='ball')return resultBall(ms,info);
  if(k==='look'||k==='miss')return resultStrike(k,ms,info);
  if(k==='foul')return resultFoul(ms,info);
- // 守備到達判定 (Ver.1.8.0): 物理モデルのインプレー打球は、抽選で決まった結果ではなく
+ // 守備到達判定 (Ver.1.7.3): 物理モデルのインプレー打球は、抽選で決まった結果ではなく
  // 野手の到達シミュレーション (fielding.js) で結果を決め直す。判定できない打球
  // (テーブル方式・角度や速度が無い場合) は従来の経路に落とす。
  if(typeof CONFIG!=='undefined'&&CONFIG.batMode==='physics'&&typeof resolveBattedBall==='function'&&['gr','fly','1B','2B','3B','HR'].includes(k)){
