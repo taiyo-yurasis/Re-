@@ -28,7 +28,7 @@ function makeContext(seed){
     __random: () => rng()
   };
   vm.createContext(context);
-  for(const file of ['config.js', 'core.js', 'pitching.js', 'batting.js']){
+  for(const file of ['config.js', 'core.js', 'pitching.js', 'batting.js', 'fielding.js']){
     vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), context, { filename:file });
   }
   vm.runInContext('Math.random=()=>__random(); G.batterSides=["right","right"]; G.top=true;', context);
@@ -79,6 +79,24 @@ function simulate(mode, seed){
           target.ground++;
           if(r.k==='1B')target.groundHit++;
         }
+        // 守備到達判定 (Ver.1.8.0): インプレー打球を fielding.js で決め直した分布
+        if(mode==='physics'&&typeof context.resolveBattedBall==='function'){
+          const play=context.resolveBattedBall(r);
+          if(play){
+            target.rInPlay=(target.rInPlay||0)+1;
+            const rk=play.forceSafe?'1B':play.k;
+            target.rResults=target.rResults||{};
+            target.rResults[rk]=(target.rResults[rk]||0)+1;
+            if(['1B','2B','3B','HR'].includes(rk))target.rHit=(target.rHit||0)+1;
+            if(rk==='HR')target.rHr=(target.rHr||0)+1;
+            if(Number.isFinite(r.launch)&&r.launch>=CONFIG.phys.groundAng){
+              if(rk==='fly')target.rFlyOut=(target.rFlyOut||0)+1;
+            }else if(Number.isFinite(r.launch)&&r.launch<CONFIG.phys.groundAng){
+              target.rGround=(target.rGround||0)+1;
+              if(rk==='1B'||rk==='2B'||rk==='3B')target.rGroundHit=(target.rGroundHit||0)+1;
+            }
+          }
+        }
       }
     }
   }
@@ -101,6 +119,15 @@ const table=simulate('table',seed0);
 console.log('野球盤 STADIUM 実コード Monte Carlo');
 console.log('各モード '+count.toLocaleString()+' 球、ゾーン一様、タイミング誤差SD=60ms、カーソル誤差SD=9px/軸、球種均等。seed='+seed0);
 printStats('物理モデル',physics.stats);
+if(physics.stats.rInPlay){
+ const s=physics.stats;
+ console.log('\n物理モデル + 守備到達判定 (Ver.1.8.0)');
+ console.log('全投球HR率: '+pct(s.rHr||0,s.total));
+ console.log('インプレー打率: '+avg(s.rHit||0,s.rInPlay)+'  ('+(s.rHit||0)+'/'+s.rInPlay+')');
+ console.log('フライアウト率/フライ: '+pct(s.rFlyOut||0,s.air));
+ console.log('ゴロ安打率: '+pct(s.rGroundHit||0,s.rGround||0)+'  ('+(s.rGroundHit||0)+'/'+(s.rGround||0)+')');
+ console.log('結果内訳: '+Object.entries(s.rResults||{}).map(([k,v])=>k+' '+v).join(' / '));
+}
 printStats('従来 hitTable 方式',table.stats);
 console.log('\n物理モデル：球種別');
 for(const type of types){

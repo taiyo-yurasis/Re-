@@ -3,7 +3,11 @@ const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=
 const cv=$('f'),cx=cv.getContext('2d'),zc=$('z'),zx=zc.getContext('2d');
 const HP={x:240,y:375},R=320,P=Math.PI,TC=['#ff5a5f','#4da3ff'];
 const BS=[0,{x:311,y:304},{x:240,y:234},{x:169,y:304}];
-const FD=[[240,292],[240,392],[322,300],[285,245],[195,245],[158,300],[120,170],[240,125],[360,170]];
+// 野手定位置。インデックス: 0投 1捕 2一 3二 4遊 5三 6左 7中 8右。
+// 一塁手・三塁手はファウルラインの内側 (フェア地域) に置く (公認野球規則で
+// 捕手以外の野手はフェア地域にいなければならない)。旧位置はラインの外側に
+// 約5px出ていたため、ラインを軸に鏡映しした位置に修正 (Ver.1.8.0)。
+const FD=[[240,292],[240,392],[315,293],[285,245],[195,245],[165,293],[120,170],[240,125],[360,170]];
 function outfieldTarget(to){
  const dx=to.x-HP.x,dy=to.y-HP.y,len=Math.hypot(dx,dy);
  if(len>=190||len===0)return{x:to.x,y:to.y};
