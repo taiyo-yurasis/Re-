@@ -11,6 +11,9 @@ const rpos = (a, b, p) => [Q[a].x + (Q[b].x - Q[a].x) * p, Q[a].y + (Q[b].y - Q[
 const store = {};
 const context = vm.createContext({
   HP: { x: 240, y: 375 }, cl: (v, a, b) => Math.max(a, Math.min(b, v)), bp: () => [110, 110],
+  // core.js が提供するグローバル (実ページでは core.js が先に読み込まれる)
+  FENCE_PX: 341,
+  flightHeightPx: (f, p) => { const r = f.hRatio || 1, t = Math.max(0, Math.min(1, p)) * r; return (f.h || 0) * 4 * t * (1 - t); },
   BS, rpos, CONFIG: { render3d: false }, URLSearchParams,
   location: { search: '' },
   localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } }

@@ -2,6 +2,19 @@
 const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.random()*(b-a),ri=(a,b)=>Math.floor(rnd(a,b+1)),cl=(v,a,b)=>Math.max(a,Math.min(b,v));
 const cv=$('f'),cx=cv.getContext('2d'),zc=$('z'),zx=zc.getContext('2d');
 const HP={x:240,y:375},R=320,P=Math.PI,TC=['#ff5a5f','#4da3ff'];
+// フェンスまでの距離 (px) の唯一の物差し: 判定の HR 下限 phys.hrMin=110m × flyPxPerM 3.1 = 341px。
+// 2D/3D の柵・壁直撃の着地・野手の到達範囲はすべてこの値に揃える。
+// (R=320 は従来のフィールド形状の基準値で、柵そのものではない)
+const FENCE_PX=341;
+// 表示の打球高度: 物理の高度 (m) を画面の px へ換算する倍率 (頂点・フェンス面とも同じ物差し)
+const HEIGHT_PX_PER_M=7;
+// 飛行中のボール高さ (px)。物理の放物線そのまま: 全滞空 T に対し高さは 4*(t/T)*(1-t/T)*頂点。
+// hRatio は表示区間が全滞空のどこまでか (通常=1。壁直撃はフェンス到達時刻までで <1 になり、
+// 終端の高さがちょうどフェンス面高度になる)。
+function flightHeightPx(f,p){
+ const r=f.hRatio||1,t=cl(p,0,1)*r;
+ return (f.h||0)*4*t*(1-t);
+}
 const BS=[0,{x:311,y:304},{x:240,y:234},{x:169,y:304}];
 // 野手定位置。インデックス: 0投 1捕 2一 3二 4遊 5三 6左 7中 8右。
 // 一塁手・三塁手はファウルラインの内側 (フェア地域) に置く (公認野球規則で
