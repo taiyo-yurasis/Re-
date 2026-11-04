@@ -90,11 +90,26 @@ function hideBattedCard(){const el=typeof $==='function'?$('bcard'):null;if(el)e
 })();
 
 function flight(to,kind,cb,out,o){
- const d=Math.hypot(to.x-HP.x,to.y-HP.y),dur=kind==='ground'?300+d*3.2:500+d*2.6,opts=o||{};
+ const d=Math.hypot(to.x-HP.x,to.y-HP.y),opts=o||{};
+ // 到達判定で決まった打球は、時間・高さを判定側の物理から受け取る (opts.dur / opts.h /
+ // opts.hRatio)。独自式 (500+d*2.6、30+d*.35) が残るのは、判定対象外の打球
+ // (ファウルフライ等) のフォールバックだけ。
+ const dur=opts.dur??(kind==='ground'?300+d*3.2:500+d*2.6);
  G.fl={id:++pid,out:!!out,t0:performance.now(),dur,to,kind,fi:opts.fi??pickFielder(to,kind),h:kind==='hr'?130:30+d*.35,...opts};
  const bd=battedPending;battedPending=null;
  if(bd){G.fl.bd=bd;if(BATTED_EXP.enabled)showBattedCard(bd)}
  sync();later(dur+250,()=>{if(bd)hideBattedCard();if(cb)cb()})
+}
+// 到達判定 (fielding.js) の表示プロファイルを flight() のパラメータへ変換する。
+// 時間 = 判定が使った滞空/到達時刻 (dispMs)、高さ = 頂点高度 (m) × HEIGHT_PX_PER_M、
+// hRatio = 表示区間が全滞空のどこまでか (壁直撃はフェンス到達まで)。
+function dispFromPlay(play){
+ if(!play||!play.resolved)return null;
+ const o={};
+ if(Number.isFinite(play.dispMs)&&play.dispMs>0)o.dur=Math.round(play.dispMs);
+ if(Number.isFinite(play.apexM))o.h=Math.round(play.apexM*HEIGHT_PX_PER_M);
+ if(Number.isFinite(play.hRatio))o.hRatio=play.hRatio;
+ return o;
 }
 function next(ms){updateHud();later(ms,ready)}
 function fin(ms){if(G.th&&G.th.steps)ms=Math.max(ms,G.th.steps.reduce((a,q)=>a+(q.dly||0)+q.dur,0)-(performance.now()-G.th.t0)+400);if(G.mv)ms=Math.max(ms,G.mv.dur-(performance.now()-G.mv.t0)+350);G.cnt={b:0,s:0};if(!G.walkoff&&G.outs<3)selectNextBatterSide();updateHud();
@@ -128,8 +143,10 @@ function forceAdv(T){
 
 // 打球がアウトにならず打者が一塁に残る: isHit=true→内野安打(安打+1)、false→エラー(安打にならない)
 // ゴロは野手がもたつく(送球が遅れる)ので、走者が先に一塁へ着く
-function safeAtFirst(kind,to,ms,isHit,info){
- const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y),F=ground?300+d*3.2:500+d*2.6;
+function safeAtFirst(kind,to,ms,isHit,info,play){
+ const ground=kind==='gr',d=Math.hypot(to.x-HP.x,to.y-HP.y);
+ const disp=play?dispFromPlay(play):null;
+ const F=disp&&disp.dur?disp.dur:(ground?300+d*3.2:500+d*2.6);
  // 走者の足は CONFIG.speed.runnerMsPerBase に揃える (打球の飛行より速く塁に着くことはない範囲で)
  const T=Math.max(CONFIG.speed.runnerMsPerBase,F+(ground?250:0)),r=forceAdv(T);
  flight(to,ground?'ground':'fly',()=>{
@@ -142,7 +159,7 @@ function safeAtFirst(kind,to,ms,isHit,info){
    G.th={id:++pid,t0:performance.now(),steps:pl.steps};
    if(pl.mv.length)G.rl={id:++pid,t0:performance.now(),moves:pl.mv};
   }
-  fin(800)},1);
+  fin(800)},1,disp);
 }
 
 // 元からいた走者を確率で進塁させる(打者は1B/2Bのときだけ bat=true で加える)。kind: '1B' | '2B'
@@ -230,11 +247,11 @@ function resultGround(ms,info,play){
  const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-35,35))*P/180,d=rnd(70,130);banner('ゴロ!');
   const gto=play&&play.to?play.to:{x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
   const roll=Math.random();
-  if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info);
+  if(roll<CONFIG.errorRate)return safeAtFirst('gr',gto,ms,false,info,play);
   // 到達判定 (fielding.js) で結果が決まった打球は、内野安打の抽選を重ねない
   // (内野安打は一塁送球との競争で既に判定されている)。エラーは従来どおり。
-  if(!(play&&play.resolved)&&roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info);
-  if(play&&play.forceSafe)return safeAtFirst('gr',gto,ms,true,info);
+  if(!(play&&play.resolved)&&roll<CONFIG.errorRate+CONFIG.infieldHitRate)return safeAtFirst('gr',gto,ms,true,info,play);
+  if(play&&play.forceSafe)return safeAtFirst('gr',gto,ms,true,info,play);
   const before=G.bases.slice();
   const loaded=!!(before[1]&&before[2]&&before[3]);
   // 満塁時のゴロ (アウトになる場合) は3パターンに分岐する:
@@ -302,7 +319,7 @@ function resultGround(ms,info,play){
     }else G.th={id:++pid,t0:performance.now(),dur:thDur(G.fl.to,BS[1]),from:G.fl.to,to:BS[1]};
    }
    showDetailMsg('gr',ms,info);fin(800)
-  },1,(groundPlay||(play&&Number.isInteger(play.fi)))?{fi:groundFi,...(groundPlay?{groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:{})}:null);
+  },1,{...((groundPlay||(play&&Number.isInteger(play.fi)))?{fi:groundFi,...(groundPlay?{groundPlay,diving:groundPlay==='dive',sliding:groundPlay==='slide'}:{})}:{}),...(dispFromPlay(play)||{})});
   // ベースカバーの移動。送球が始まる前に動き出せるよう、打球の発生と同時に rl へ登録する。
   if(G.fl){
    const rlMoves=[];
@@ -332,15 +349,17 @@ function resultGround(ms,info,play){
 // フライの飛距離(px)。物理モデルは飛距離(m)を返すので、描画と犠飛判定の尺度(px)に換算する。
 // 飛距離の情報がない場合(table方式など)は従来どおりランダム。
 function flyDistPx(info){
- // 上限はフェンス際(R-8=312px)。HR未満の特大フライでもボールがフェンスを越えて見えないようにする
- if(info&&Number.isFinite(info.dist))return cl(Math.round(info.dist*CONFIG.flyPxPerM),60,312);
+ // 上限はフェンス際(FENCE_PX-4)。HR未満の特大フライでもボールがフェンスを越えて見えないようにする
+ if(info&&Number.isFinite(info.dist))return cl(Math.round(info.dist*CONFIG.flyPxPerM),60,FENCE_PX-4);
  return rnd(160,270);
 }
 
 function resultFly(ms,info,play){
- const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,d=flyDistPx(info);banner('フライ!');
-  const fto=play&&play.to?play.to:{x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
-  if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info);
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):rnd(-38,38))*P/180,dFallback=flyDistPx(info);banner('フライ!');
+  const fto=play&&play.to?play.to:{x:240+dFallback*Math.sin(a),y:375-dFallback*Math.cos(a)};
+  // 犠飛・タッチアップの深さは、到達判定の着地点の深さで測る (表示・判定で同じ物差し)
+  const d=play&&play.to?Math.hypot(fto.x-HP.x,fto.y-HP.y):dFallback;
+  if(Math.random()<CONFIG.errorRate)return safeAtFirst('fly',fto,ms,false,info,play);
   // 到達判定で決まった打球は、ファインプレーかどうかも捕球の際どさ (到達比率) で決める
   const isFinePlay=play&&play.resolved?!!play.finePlay:Math.random()<CONFIG.finePlayFly;
   if(G.outs===2){
@@ -352,7 +371,9 @@ function resultFly(ms,info,play){
    G.outs++;
    let m=isFinePlay?'ファインプレー!!':'フライアウト';
    let scoredRuns=0;
-   if(G.outs<3&&!isFinePlay){
+   // 犠飛・タッチアップは打球の深さだけで判定し、ファインプレーとは切り離す
+   // (ファインプレーはバナーと余韻だけ。好捕でも深い打球ならタッチアップは成立する)
+   if(G.outs<3){
     const C=CONFIG,hasThird=!!G.bases[3],hasSecond=!!G.bases[2];
     const sacFly=hasThird&&Math.random()<(d>=C.sacFlyDepthDeep?C.sacFlyDeepRate:d>=C.sacFlyDepthMid?C.sacFlyMidRate:C.sacFlyShallowRate);
     const tagUpSecond=hasSecond&&(!hasThird||sacFly)&&d>=C.tagUpDepth&&Math.random()<C.tagUpSecondRate;
@@ -377,7 +398,7 @@ function resultFly(ms,info,play){
    if(scoredRuns){score(scoredRuns);banner(`+${scoredRuns}点!`);}
    showDetailMsg('fly',ms,info);
    fin(isFinePlay?CONFIG.finePlayLingerMs:1000);
-  },1,isFinePlay?{diving:true,finePlay:true,...(play&&Number.isInteger(play.fi)?{fi:play.fi}:{})}:(play&&Number.isInteger(play.fi)?{fi:play.fi}:null));
+  },1,{...(isFinePlay?{diving:true,finePlay:true}:{}),...(play&&Number.isInteger(play.fi)?{fi:play.fi}:{}),...(dispFromPlay(play)||{})});
   return;
 }
 /* 投球ボールの凍結と消去 (表示専用・判定には触らない)。
@@ -446,7 +467,7 @@ function hit(k, ms, info, play) {
  const wall = play&&play.resolved ? !!play.wall : (k==='2B'||k==='3B')&&!edge;
  const ground = play&&play.resolved ? !!play.ground : edge||(k==='1B'&&Math.random()<.5);
 
- const d = wall&&!(play&&play.to) ? R-8 : (k==='1B' ? rnd(190,230) : k==='2B' ? rnd(235,290) : k==='3B' ? rnd(295,312) : rnd(345,380));
+ const d = wall&&!(play&&play.to) ? FENCE_PX-4 : (k==='1B' ? rnd(190,230) : k==='2B' ? rnd(235,290) : k==='3B' ? rnd(295,312) : rnd(FENCE_PX+4,FENCE_PX+39));
  const to = play&&play.to ? play.to : {x: 240 + d * Math.sin(a), y: 375 - d * Math.cos(a)};
 
  // 到達判定で決まった安打は、ファインプレー抽選で覆らない (好捕は判定側で決まる)
@@ -478,13 +499,18 @@ function hit(k, ms, info, play) {
  const actualTo = outfieldTarget(to);
 
  const pl = targetBaseForThrow === 0 ? null : throwPlan(actualTo, targetBaseForThrow, o ? o.fi : undefined);
- 
+
+ // 到達判定の打球は表示も物理に揃える。HR の dispMs はフェンス面到達時刻なので、
+ // 表示の着地点 (フェンスの少し先) までの分だけ距離比で伸ばす (水平速度は一定という物理どおり)
+ const disp=dispFromPlay(play);
+ if(disp&&k==='HR'&&disp.dur)disp.dur=Math.round(disp.dur*(Math.hypot(to.x-HP.x,to.y-HP.y)/FENCE_PX));
+
  flight(to, k==='HR'?'hr':ground?'ground':'fly', () => {
   score(r);
   if(r) banner(`+${r}点!`, k==='HR'?'hr':'');
   if(pl) G.th = {id: ++pid, t0: performance.now(), steps: pl.steps};
   fin(1200);
- }, 0, {...o, isHit: true});
+ }, 0, {...o, isHit: true, ...(disp||{})});
 
  if (pl && pl.mv.length) G.rl = {id: ++pid, t0: performance.now(), moves: pl.mv};
 }

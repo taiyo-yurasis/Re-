@@ -5,20 +5,20 @@ const bgx=bg.getContext('2d');
 let bgDots=null; // 観客席の点々は最初に決め、描き直しても同じ見た目に保つ
 function paintBg(){const g=bgx;
  g.fillStyle='#0a1020';g.fillRect(0,0,480,400);
- if(!bgDots){bgDots=[];for(let i=0;i<1100;i++){const x=Math.random()*480,y=Math.random()*400;if(Math.hypot(x-240,y-375)>R+10)bgDots.push([x,y,`hsl(${ri(0,360)},55%,${ri(30,60)}%)`])}}
+ if(!bgDots){bgDots=[];for(let i=0;i<1100;i++){const x=Math.random()*480,y=Math.random()*400;if(Math.hypot(x-240,y-375)>FENCE_PX+10)bgDots.push([x,y,`hsl(${ri(0,360)},55%,${ri(30,60)}%)`])}}
  for(const dot of bgDots){g.fillStyle=dot[2];g.fillRect(dot[0],dot[1],3,3)}
- g.fillStyle='#17653d';g.beginPath();g.arc(240,375,R+6,0,2*P);g.fill();
+ g.fillStyle='#17653d';g.beginPath();g.arc(240,375,FENCE_PX,0,2*P);g.fill();
  const wd=r=>{g.beginPath();g.moveTo(240,375);g.arc(240,375,r,-.75*P,-.25*P);g.closePath()};
- wd(R+6);g.fillStyle='#8a5a3a';g.fill();
- for(let r=R-16,i=0;r>0;r-=24,i++){wd(r);g.fillStyle=i%2?'#2e9a4c':'#38b25a';g.fill()}
- g.save();wd(R-16);g.clip();g.fillStyle='#c88b52';g.beginPath();g.arc(240,300,108,0,2*P);g.fill();g.restore();
+ wd(FENCE_PX);g.fillStyle='#8a5a3a';g.fill();
+ for(let r=FENCE_PX-22,i=0;r>0;r-=24,i++){wd(r);g.fillStyle=i%2?'#2e9a4c':'#38b25a';g.fill()}
+ g.save();wd(FENCE_PX-22);g.clip();g.fillStyle='#c88b52';g.beginPath();g.arc(240,300,108,0,2*P);g.fill();g.restore();
  g.fillStyle='#38b25a';g.beginPath();[[240,354],[290,304],[240,256],[190,304]].forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.fill();
  g.fillStyle='#c88b52';g.beginPath();g.arc(240,370,35,0,2*P);g.fill();
  g.fillStyle='#d9a066';g.beginPath();g.arc(240,292,13,0,2*P);g.fill();
  // ファウルライン: 実物の実務どおり、バッターボックスの区間はチョークを引かず途切れさせ、
  // ボックスを過ぎた所から再開する (概念上のライン自体は本塁頂点から真っ直ぐ延びる)。
- g.strokeStyle='#fff';g.lineWidth=2.5;[-1,1].forEach(s=>{g.beginPath();g.moveTo(240+s*37,338);g.lineTo(240+s*(R+6)*.7071,375-(R+6)*.7071);g.stroke()});
- g.strokeStyle='#ffd23f';g.lineWidth=4;g.beginPath();g.arc(240,375,R+6,-.75*P,-.25*P);g.stroke();
+ g.strokeStyle='#fff';g.lineWidth=2.5;[-1,1].forEach(s=>{g.beginPath();g.moveTo(240+s*37,338);g.lineTo(240+s*FENCE_PX*.7071,375-FENCE_PX*.7071);g.stroke()});
+ g.strokeStyle='#ffd23f';g.lineWidth=4;g.beginPath();g.arc(240,375,FENCE_PX,-.75*P,-.25*P);g.stroke();
  g.fillStyle='#fff';BS.slice(1).forEach(b=>g.fillRect(b.x-6,b.y-6,12,12));
  // 本塁は長方形ではなく五角形 (公認野球規則: 投手側の前面17インチ=43.2cm、ファウルラインに沿う2辺が
  // 8.5インチ、その先の2辺が12インチで90°の頂点を作る)。頂点 (捕手側の尖り) を HP (240,375) に置き、
@@ -88,7 +88,9 @@ function fpos(i,now){const b=FD[i],f=G.fl;
 
  const targetTo = f.isHit && i >= 6 ? outfieldTarget(f.to) : f.to;
 
- const dx=targetTo.x-HP.x,dy=targetTo.y-HP.y,k=Math.min(1,(R-14)/Math.hypot(dx,dy)),tx=HP.x+dx*k,ty=HP.y+dy*k,d=Math.hypot(tx-b[0],ty-b[1]);
+ // 移動先の上限はフェンス (FENCE_PX) の僅か内側まで。落下点まで野手が届く見た目にする
+ // (旧 R-14=306px クリップでは、柵際の落下点まで行っていないのに捕球扱いに見えた)
+ const dx=targetTo.x-HP.x,dy=targetTo.y-HP.y,k=Math.min(1,(FENCE_PX-3)/Math.hypot(dx,dy)),tx=HP.x+dx*k,ty=HP.y+dy*k,d=Math.hypot(tx-b[0],ty-b[1]);
  let T=d/FSPD;if(f.out)T=Math.min(T,f.dur*.92);
  const p=T>0?Math.min(1,(now-f.t0)/T):1,e=1-(1-p)*(1-p);
  // ダイブ/スライドのランジは固定の斜め方向ではなく、着地点 (移動方向) へ体を投げ出す。
@@ -139,7 +141,7 @@ function drawField(now){
 
  if(G.phase==='pitch'&&G.pitch){const t=cl(G.pitch.t||0,0,1),[px]=bp(G.pitch,t);baseball(cx,240+(px-110)*.45,292+80*t,4.5,spinState(G.pitch,t))}
  if(G.fl&&!G.th){const f=G.fl,p=cl((now-f.t0)/f.dur,0,1),bk=f.wall?cl((now-f.t0-f.dur)/300,0,1)*16:0,ux=f.to.x-HP.x,uy=f.to.y-HP.y,ul=Math.hypot(ux,uy)||1,x=HP.x+ux*p-ux/ul*bk,y=HP.y+uy*p-uy/ul*bk;
-  const h=f.kind==='ground'?Math.abs(Math.sin(p*P*5))*8*(1-p):f.h*4*p*(1-p);
+  const h=f.kind==='ground'?Math.abs(Math.sin(p*P*5))*8*(1-p):flightHeightPx(f,p);
   cx.fillStyle='rgba(0,0,0,.35)';cx.beginPath();cx.ellipse(x,y,5,2.5,0,0,7);cx.fill();
   dot(x,y-h,4+h/25,'#fff','#c33')}
  

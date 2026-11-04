@@ -55,9 +55,11 @@ test('十分な飛距離と高度があればホームラン', () => {
   assert.equal(r.k, 'HR');
 });
 
-test('フェンス際でも高度が足りない打球は直撃の二塁打になる', () => {
+test('フェンス際でも高度が足りない打球は直撃の長打になる', () => {
   const r = resolve({ speed: 150, launch: 22, angle: 15, dist: 111 });
-  assert.equal(r.k, '2B');
+  // 着地は統一フェンス FENCE_PX-4=337 (旧 R-4=316)。回収位置が深くなった分、
+  // このサンプルは回収レースで三塁打になる (自然分布では wall 自体が0件で分布は不変)
+  assert.equal(r.k, '3B');
   assert.equal(r.wall, true);
 });
 

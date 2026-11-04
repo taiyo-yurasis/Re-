@@ -5,7 +5,7 @@
  * シミュレーションして結果 (アウト/安打/長打/HR) を決める。
  * ダイナマイト野球の方式 (先行シミュレーションで結果が創発する) の Re- 版で、
  * 打球・守備シミュレーター (アーティファクト) で検証した判定を本編の
- * フィールド寸法 (フェンス半径320px・塁間約100px) に合わせて移植したもの。
+ * フィールド寸法 (フェンス FENCE_PX=341px・塁間約100px) に合わせて移植したもの。
  *
  * 決め方の柱:
  *  1) 担当は到着時刻の単純レースではなく、ゾーン別の優先順位表で決める。
@@ -87,9 +87,17 @@ function resolveFly(info, a, ar){
  }
  const isHR=fenceH!==null && fenceH>=F.fenceHeightM;
  const isWall=fenceH!==null && !isHR;
- const landPx=isWall?R-4:Math.min(distM*C.flyPxPerM, R+30);
+ const landPx=isWall?FENCE_PX-4:Math.min(distM*C.flyPxPerM, FENCE_PX);
  const to={x:HP.x+landPx*Math.sin(ar), y:HP.y-landPx*Math.cos(ar)};
- if(isHR) return {k:'HR', resolved:true, to:null, fi:ofByAngle(a), wall:false};
+ // 表示用プロファイル (判定と同じ物理から作る。表示側の独自式は廃止):
+ //  hangMs=判定の滞空そのもの / dispMs=表示の飛行時間 (壁直撃・HR はフェンス面到達まで)
+ //  apexM=頂点高度 (m、フェンス高度と同じ dragHeightK 割り引き) / fenceH=フェンス面高度 (m)
+ //  hRatio=dispMs/hangMs (壁直撃では表示終端の高さが fenceH と一致する)
+ const apexM=F.dragHeightK*(v*Math.sin(lr))**2/(2*9.8);
+ const cos=Math.cos(lr);
+ const fenceMs=fenceH!==null&&cos>0.05?fenceM/(v*cos)*1000*F.hangScale:null;
+ const prof={hangMs, apexM, fenceH};
+ if(isHR) return {k:'HR', resolved:true, to:null, fi:ofByAngle(a), wall:false, ...prof, dispMs:fenceMs??hangMs, hRatio:1};
 
  const depth=landPx;
  const cands=flyCandidates(a, depth);
@@ -105,7 +113,7 @@ function resolveFly(info, a, ar){
   if(arr<=hangMs){ catcher=i; catchRatio=hangMs>0?arr/hangMs:1; break; }
  }
  if(catcher!==null){
-  return {k:'fly', resolved:true, to, fi:catcher, finePlay:catchRatio>=F.finePlayRatio, wall:false};
+  return {k:'fly', resolved:true, to, fi:catcher, finePlay:catchRatio>=F.finePlayRatio, wall:false, ...prof, dispMs:hangMs, hRatio:1};
  }
  // 捕れなかった: 回収レースで塁を決める (担当は優先順位の先頭の外野手)。
  // 外野手の頭上を越えた打球は、振り向いて壁まで追う時間が余分にかかる。
@@ -116,13 +124,13 @@ function resolveFly(info, a, ar){
  const fieldMs=Math.max(hangMs, arrR)+(overshoot>0?220+overshoot/C.speed.runPx:60);
  if(isWall){
   const k=retrievalBases(fieldMs, to, {canTriple:true});
-  return {k:k==='1B'?'2B':k, resolved:true, to, fi:ri, wall:true};
+  return {k:k==='1B'?'2B':k, resolved:true, to, fi:ri, wall:true, ...prof, dispMs:fenceMs??hangMs, hRatio:hangMs>0?(fenceMs??hangMs)/hangMs:1};
  }
  if(depth>=F.deepHitPx){
   const k=retrievalBases(fieldMs, to, {canTriple:Math.abs(a)>=14});
-  return {k, resolved:true, to, fi:ri, wall:false};
+  return {k, resolved:true, to, fi:ri, wall:false, ...prof, dispMs:hangMs, hRatio:1};
  }
- return {k:'1B', resolved:true, to, fi:ri, wall:false};
+ return {k:'1B', resolved:true, to, fi:ri, wall:false, ...prof, dispMs:hangMs, hRatio:1};
 }
 
 // ---- ゴロ (打球角度 < groundAng): 打球の進路上で野手が迎撃できるかを判定 ----
@@ -148,8 +156,8 @@ function resolveGround(info, a, ar){
   const disc=vDirtOut*vDirtOut-2*F.rollDecelGrass*(d-F.dirtPx);
   return disc<0?Infinity:tDirt+(vDirtOut-Math.sqrt(disc))/F.rollDecelGrass;
  };
- const wall=stopDepth>=R-2;
- const effStop=Math.min(stopDepth, R-6);
+ const wall=stopDepth>=FENCE_PX-2;
+ const effStop=Math.min(stopDepth, FENCE_PX-6);
  // 候補野手が進路上の点 d で迎撃できるか (到着がボールの通過に間に合うか)。
  // 速いゴロは、野手が先回りして構えている点でしか確保できない。
  const ballSpeedAt=d=>d<=F.dirtPx?Math.sqrt(Math.max(0, v0*v0-2*F.rollDecelDirt*d)):Math.sqrt(Math.max(0, vDirtOut*vDirtOut-2*F.rollDecelGrass*(d-F.dirtPx)));
@@ -183,8 +191,9 @@ function resolveGround(info, a, ar){
  }
  if(best){
   const to=best.pt;
-  if(best.total<=C.speed.runnerMsPerBase) return {k:'gr', resolved:true, to, fi:best.fi, ground:true};
-  return {k:'gr', resolved:true, forceSafe:true, to, fi:best.fi, ground:true};
+  // 表示の飛行時間は、判定が使ったボールの到達時刻 ballTimeAt そのもの
+  if(best.total<=C.speed.runnerMsPerBase) return {k:'gr', resolved:true, to, fi:best.fi, ground:true, dispMs:ballTimeAt(best.d)};
+  return {k:'gr', resolved:true, forceSafe:true, to, fi:best.fi, ground:true, dispMs:ballTimeAt(best.d)};
  }
  // 内野で止まった打球 (ドリブル) は最寄りの内野手が拾って送球勝負
  if(effStop<F.grassLinePx){
@@ -197,8 +206,8 @@ function resolveGround(info, a, ar){
   }
   const throwMs=Math.hypot(pt.x-BS[1].x, pt.y-BS[1].y)/C.speed.throwPx;
   const total=bt*F.raceScale+F.transferMs+throwMs;
-  if(total<=C.speed.runnerMsPerBase) return {k:'gr', resolved:true, to:pt, fi:bi, ground:true};
-  return {k:'gr', resolved:true, forceSafe:true, to:pt, fi:bi, ground:true};
+  if(total<=C.speed.runnerMsPerBase) return {k:'gr', resolved:true, to:pt, fi:bi, ground:true, dispMs:ballTimeAt(effStop)};
+  return {k:'gr', resolved:true, forceSafe:true, to:pt, fi:bi, ground:true, dispMs:ballTimeAt(effStop)};
  }
  // 外野手の回収: 進路上で迎撃できる最も浅い点で確保する
  const ofI=ofByAngle(a), ofP=fielderPos(ofI);
@@ -209,9 +218,9 @@ function resolveGround(info, a, ar){
  const fPos=pointAt(fieldDepth);
  // 浅い場所で野手の前に確保されたら単打まで (確保位置キャップ)
  const inFront=fieldDepth<=distToHome(ofP.x, ofP.y)+10;
- if(inFront && !wall) return {k:'1B', resolved:true, to:fPos, fi:ofI, ground:true};
+ if(inFront && !wall) return {k:'1B', resolved:true, to:fPos, fi:ofI, ground:true, dispMs:ballTimeAt(fieldDepth)};
  const k=retrievalBases(fieldT*F.raceScale, fPos, {canTriple:wall||Math.abs(a)>=20});
- return {k, resolved:true, to:fPos, fi:ofI, ground:true, wall:k!=='1B'&&wall};
+ return {k, resolved:true, to:fPos, fi:ofI, ground:true, wall:k!=='1B'&&wall, dispMs:ballTimeAt(fieldDepth)};
 }
 
 // 打球結果の入口。batResultPhysics の info から最終結果を決める。

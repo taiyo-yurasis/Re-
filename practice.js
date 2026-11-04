@@ -16,11 +16,27 @@ function pracPitch(){
  if(c==='in')x=110-sgn*rnd(26,60);else if(c==='out')x=110+sgn*rnd(26,60);else if(c==='mid')x=110+rnd(-20,20);else x=rnd(60,160);
  return{t,x,y}}
 
-// 打球を試合と同じ見た目でフィールドに飛ばす (判定は変えず、着地点の計算だけ試合側と揃える)。
+// 打球を試合と同じ見た目でフィールドに飛ばす。
+// 到達判定 (play) があれば、結果種別・着地点・wall・担当・表示の時間/高さをそのまま使う。
 // 飛ばした場合は flight の完了後に次の球へ進むので true を返す
-function pracFlight(k,info,ms){
- const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):cl(cl((ms||0)*.3,-38,38)+rnd(-9,9),-42,42))*P/180;
+function pracFlight(k,info,ms,play){
  const done=()=>later(350,ready);
+ if(play&&play.resolved){
+  const disp=dispFromPlay(play);
+  if(play.ground||play.k==='gr'){
+   if(play.to){flight(play.to,'ground',done,play.forceSafe?0:(play.k==='gr'?1:0),{fi:play.fi,...(disp||{})});return true}
+  }else{
+   let to=play.to;
+   if(!to){ // HR はフェンスの少し先に着地点を作り、表示時間は距離比で伸ばす (試合の hit() と同じ)
+    const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):0)*P/180,d=rnd(FENCE_PX+4,FENCE_PX+39);
+    to={x:240+d*Math.sin(a),y:375-d*Math.cos(a)};
+    if(disp&&disp.dur)disp.dur=Math.round(disp.dur*(d/FENCE_PX));
+   }
+   flight(to,play.k==='HR'?'hr':'fly',done,play.k==='fly'?1:0,{fi:play.fi,...(disp||{}),...(play.wall?{wall:true}:{})});
+   return true;
+  }
+ }
+ const a=(info&&Number.isFinite(info.angle)?cl(info.angle,-44,44):cl(cl((ms||0)*.3,-38,38)+rnd(-9,9),-42,42))*P/180;
  if(k==='gr'){
   const d=rnd(70,130);
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},'ground',done,1);
@@ -35,7 +51,7 @@ function pracFlight(k,info,ms){
   const edge=(k==='2B'||k==='3B')&&Math.abs(a)>=36*P/180;
   const wall=(k==='2B'||k==='3B')&&!edge;
   const ground=edge||(k==='1B'&&Math.random()<.5);
-  const d=wall?R-8:(k==='1B'?rnd(190,230):k==='2B'?rnd(235,290):k==='3B'?rnd(295,312):rnd(345,380));
+  const d=wall?FENCE_PX-4:(k==='1B'?rnd(190,230):k==='2B'?rnd(235,290):k==='3B'?rnd(295,312):rnd(FENCE_PX+4,FENCE_PX+39));
   flight({x:240+d*Math.sin(a),y:375-d*Math.cos(a)},k==='HR'?'hr':ground?'ground':'fly',done,0,wall?{wall:true}:null);
   return true;
  }
@@ -63,12 +79,17 @@ function pracResult(k,ms,info){
   if(info&&Number.isFinite(info.speed))parts.push(`打球 ${info.speed.toFixed(0)}km/h / 角度 ${info.launch.toFixed(0)}°`+(Number.isFinite(info.dist)?` / 推定飛距離 ${info.dist.toFixed(0)}m`:''));
   if(info&&info.dir){parts.push(`${PR_DL[info.dir]}×${PR_CL[info.course]}`,lift>CONFIG.liftBand?'フライ寄り':lift<-CONFIG.liftBand?'ゴロ寄り':'ライナー')}
  }
- if(k==='ball')S.ball++;else if(k==='look')S.look++;else if(k==='miss')S.miss++;else if(k==='foul')S.foul++;else{S.play++;S.res[k]++}
+ // 物理モードのインプレー打球は、練習でも試合と同じ到達判定 (fielding.js) を通す。
+ // 集計・表示・飛行はすべて解決後の結果 (rk) で行い、forceSafe は内野安打として数える。
+ let play=null;
+ if(CONFIG.batMode==='physics'&&typeof resolveBattedBall==='function'&&['gr','fly','1B','2B','3B','HR'].includes(k))play=resolveBattedBall(info);
+ const rk=play?(play.forceSafe?'1B':play.k):k;
+ if(k==='ball')S.ball++;else if(k==='look')S.look++;else if(k==='miss')S.miss++;else if(k==='foul')S.foul++;else{S.play++;S.res[rk]++}
  // 見逃し(msがnull/undefined)では直前の打撃詳細を維持する。
- if(ms!=null){const detail=$('hint');if(detail)detail.textContent=`${PR_RL[k]||k} ｜ ${parts.join(' / ')}`;}
- banner(PR_RL[k]||k);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[k]||k}`);updateHud();
+ if(ms!=null){const detail=$('hint');if(detail)detail.textContent=`${PR_RL[rk]||rk} ｜ ${parts.join(' / ')}`;}
+ banner(PR_RL[rk]||rk);setMsg(`[ ${parts.join(' / ')} ] ${PR_RL[rk]||rk}`);updateHud();
  // インプレーの打球はフィールドを飛ばしてから次の球へ。それ以外は従来通り少し待つ
- if(!(ms!=null&&pracFlight(k,info,ms)))later(500,ready)}
+ if(!(ms!=null&&pracFlight(rk,info,ms,play)))later(500,ready)}
 
 function pracHud(){
  const S=G.prac,sb=$('prac-stats');sb.style.display='table';document.querySelector('.hd').style.display='none';sb.replaceChildren();

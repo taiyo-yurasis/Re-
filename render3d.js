@@ -186,7 +186,7 @@ function fieldBallState(game,now){
   if(t.steps){let start=0,pos=null,air=false,carry=false;for(const q of t.steps){const a=start+(q.dly||0),b=a+q.dur;if(elapsed<a){pos={x:q.from.x,y:q.from.y};carry=!!q.carry;break}if(elapsed<b){const p=cl((elapsed-a)/q.dur,0,1);pos={x:q.from.x+(q.to.x-q.from.x)*p,y:q.from.y+(q.to.y-q.from.y)*p};air=!q.carry;carry=!!q.carry;if(air)pos.h=Math.sin(p*Math.PI)*14;break}start=b;pos={x:q.to.x,y:q.to.y};carry=!!q.carry}return pos?{...pos,h:pos.h||0,visible:true,carry}:null}
   const p=elapsed/t.dur;if(p<0||p>=1)return null;return{x:t.from.x+(t.to.x-t.from.x)*p,y:t.from.y+(t.to.y-t.from.y)*p,h:Math.sin(p*Math.PI)*14,visible:true,carry:false};
  }
- if(game.fl){const f=game.fl,p=cl((now-f.t0)/f.dur,0,1),back=f.wall?cl((now-f.t0-f.dur)/300,0,1)*16:0,dx=f.to.x-HP.x,dy=f.to.y-HP.y,len=Math.hypot(dx,dy)||1;return{x:HP.x+dx*p-dx/len*back,y:HP.y+dy*p-dy/len*back,h:f.kind==='ground'?Math.abs(Math.sin(p*Math.PI*5))*8*(1-p):f.h*4*p*(1-p),visible:true,carry:false}}
+ if(game.fl){const f=game.fl,p=cl((now-f.t0)/f.dur,0,1),back=f.wall?cl((now-f.t0-f.dur)/300,0,1)*16:0,dx=f.to.x-HP.x,dy=f.to.y-HP.y,len=Math.hypot(dx,dy)||1;return{x:HP.x+dx*p-dx/len*back,y:HP.y+dy*p-dy/len*back,h:f.kind==='ground'?Math.abs(Math.sin(p*Math.PI*5))*8*(1-p):flightHeightPx(f,p),visible:true,carry:false}}
  if(game.pitch&&(game.phase==='pitch'||game.phase==='busy')){
   const p=game.pitch,tRaw=(Number.isFinite(p.t0)&&Number.isFinite(p.dur)&&p.dur>0)?(now-p.t0)/p.dur:cl(p.t||0,0,1);
   // 消去は位相に依存させない (pitchBallGone): 空振り凍結中は hideAt まで
@@ -281,13 +281,13 @@ function fieldCatchPlayType(fl){
  // 明らかに超える」ときだけに限定する。通常捕球では条件を満たしても jump にせず、
  // この後の dive / slide / reach 判定に回す (レンダラー側の格下げ・ボールの消去
  // タイミング・DBG の catchType 表示もすべてこの関数の結果に揃う)。
- // フェンス際 = 着地点とフェンス (本塁から R=320 の円弧) の距離が 18px 以内。
- // (wall の打球は R-8=312 に着くので当然含まれるが、明示しておく)
- // 捕球高さ = 捕球時点 (飛行の94%) のボール高さ = fl.h*4*.94*.06 (px)。
+ // フェンス際 = 着地点とフェンス (本塁から FENCE_PX=341 の円弧) の距離が 18px 以内。
+ // (wall の打球は FENCE_PX-4=337 に着くので当然含まれるが、明示しておく)
+ // 捕球高さ = 捕球時点 (飛行の94%) のボール高さ (px、物理プロファイル flightHeightPx)。
  // 立ちリーチはジャンプ量の基準 0.55 world = 22px で、その 1.25 倍 (27.5px) 以上を
- // 「明らかに超える」とする (fl.h 換算で約122以上)。
+ // 「明らかに超える」とする。
  // さらに野手がフェンス方向へ走っている (外向き移動が支配的) ことも求める。
- const fenceGap=R-dHome,catchH=(fl.h||0)*4*.94*.06;
+ const fenceGap=FENCE_PX-dHome,catchH=flightHeightPx(fl,.94);
  const rx=(fl.to.x-HP.x)/(dHome||1),ry=(fl.to.y-HP.y)/(dHome||1),outward=tx*rx+ty*ry;
  if(fl.finePlay&&(fenceGap<=18||fl.wall)&&catchH>=27.5&&outward>=Math.max(12,dist*.5))return 'jump';
  if(dist<46)return 'reach';
@@ -409,10 +409,9 @@ function render3dInitScene(){
   function disk(x,y,rx,rz,material,height=0,segments=48){const pts=[];for(let i=0;i<segments;i++){const a=i/segments*Math.PI*2;pts.push([x+Math.cos(a)*rx,y+Math.sin(a)*rz])}pts.push(pts[0]);return fieldPoly([[x,y],...pts],material,height)} // 最初の外周点を末尾にも足して扇を閉じる。これが無いと東(+X)方向に三角形1枚分の楔形の欠けができ、一塁側で土の円が三角に欠けて見える
   function box(x,y,z,sx,sy,sz,material,parent=root){const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),material);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
   function sphere(parent,x,y,z,r,material,segments=8){const mesh=new THREE.Mesh(new THREE.SphereGeometry(r,segments,6),material);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
-  // フェンスの流線型: 試作は両翼97m/中間110m/センター122m を 97+25cos² の1本の曲線で通す。
-  // ここでは判定(2D座標)との対応を壊さないよう、両翼は現行フェンス円 R+6 を下限(内側に食い込ませない)に、
-  // センターだけ +18px 盛る緩やかな流線型に写す。野手の到達範囲は R-14 なので両翼でも干渉しない。
-  function fenceRadius(a){const t=Math.min(1,Math.abs(a)/(Math.PI/4)),c=Math.cos(t*Math.PI/2);return R+6+18*c*c}
+  // フェンスは全方向で判定と同じ唯一の物差し FENCE_PX (110m) に統一する (流線型は廃止)。
+  // 野手の到達範囲も FENCE_PX-3 まで広がったので、柵際の捕球でも干渉しない。
+  function fenceRadius(a){return FENCE_PX}
   // 地面全面: 試作と同じ芝の縞テクスチャを敷き、ファウルゾーンやフェンス外にも地面を持たせる(空色の背景が地面に見えないように)。
   const gc=document.createElement('canvas');gc.width=gc.height=512;const gg=gc.getContext('2d');for(let i=0;i<16;i++){gg.fillStyle=i%2?'#2e9a4c':'#38b25a';gg.fillRect(i*32,0,32,512)}
   const gtex=new THREE.CanvasTexture(gc);gtex.wrapS=gtex.wrapT=THREE.RepeatWrapping;gtex.repeat.set(6,6);if('colorSpace' in gtex)gtex.colorSpace=THREE.SRGBColorSpace;
@@ -505,7 +504,8 @@ function render3dInitScene(){
   for(let i=0;i<=fenceSegments;i++){
    const a=-Math.PI/4+i/fenceSegments*Math.PI/2,radius=fenceRadius(a),fx=240+Math.sin(a)*radius,fy=375-Math.cos(a)*radius,p=toWorld(fx,fy),nx=Math.sin(a),nz=-Math.cos(a);
    const innerX=p.x-nx*.035,innerZ=p.z-nz*.035,outerX=p.x+nx*.035,outerZ=p.z+nz*.035;
-   fenceVerts.push(innerX,.02,innerZ,innerX,.58,innerZ,outerX,.02,outerZ,outerX,.58,outerZ);fenceTop.push(new THREE.Vector3(p.x,.59,p.z));
+   // フェンスの高さは判定の fenceHeightM=4m を表示の物差しで換算: 4m×HEIGHT_PX_PER_M×FIELD3D_SCALE ≒ 1.0 world
+   fenceVerts.push(innerX,.02,innerZ,innerX,1.0,innerZ,outerX,.02,outerZ,outerX,1.0,outerZ);fenceTop.push(new THREE.Vector3(p.x,1.01,p.z));
    if(i<fenceSegments){const n=i*4,j=n+4;
     fenceIndices.push(n,n+1,j+1,n,j+1,j, n+2,j+3,n+3,n+2,j+2,j+3,
      n+1,n+3,j+3,n+1,j+3,j+1, n+2,j+2,j,n+2,j,n);
@@ -513,9 +513,9 @@ function render3dInitScene(){
   }
   const fenceGeo=new THREE.BufferGeometry();fenceGeo.setAttribute('position',new THREE.Float32BufferAttribute(fenceVerts,3));fenceGeo.setIndex(fenceIndices);fenceGeo.computeVertexNormals();const fenceMesh=new THREE.Mesh(fenceGeo,mats.wall);fenceMesh.material.side=THREE.DoubleSide;root.add(fenceMesh);
   root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fenceTop),new THREE.LineBasicMaterial({color:0xfacc15})));
-  // 距離表示(試作準拠: 両翼97/中間110/センター122、文字色 #fde68a)。位置は流線型フェンスの内面に沿わせる見た目の演出。
-  function distLabel(text,deg){const a=deg*Math.PI/180,c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.font='900 68px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fde68a';g.fillText(text,128,66);const tex=new THREE.CanvasTexture(c);if('colorSpace' in tex)tex.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(.74,.37),new THREE.MeshBasicMaterial({map:tex,transparent:true}));const r=(fenceRadius(a)-3)*FIELD3D_SCALE;m.position.set(Math.sin(a)*r,.29,-Math.cos(a)*r);m.lookAt(0,.29,3);root.add(m)}
-  for(const [deg,txt] of [[-43,'97'],[-22,'110'],[0,'122'],[22,'110'],[43,'97']])distLabel(txt,deg); // 両翼はポールと重ならないよう少し内側へ
+  // 距離表示: フェンスは全方向 110m (FENCE_PX) に統一したので、表示も全て 110 に揃える (文字色 #fde68a)。
+  function distLabel(text,deg){const a=deg*Math.PI/180,c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.font='900 68px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fde68a';g.fillText(text,128,66);const tex=new THREE.CanvasTexture(c);if('colorSpace' in tex)tex.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(.74,.37),new THREE.MeshBasicMaterial({map:tex,transparent:true}));const r=(fenceRadius(a)-3)*FIELD3D_SCALE;m.position.set(Math.sin(a)*r,.5,-Math.cos(a)*r);m.lookAt(0,.5,3);root.add(m)}
+  for(const deg of [-43,-22,0,22,43])distLabel('110',deg); // 両翼はポールと重ならないよう少し内側へ
   // ファウルポール(試作準拠: 黄 #facc15 の柱)。両翼のフェンス端に立てる。
   for(const a of [-Math.PI/4,Math.PI/4]){const r=fenceRadius(a)*FIELD3D_SCALE,pole=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,1.6,8),new THREE.MeshBasicMaterial({color:0xfacc15}));pole.position.set(Math.sin(a)*r,.8,-Math.cos(a)*r);root.add(pole)}
   // スタンドの弧とスコアボード、ライトタワー(試作の球場シルエット)。すべてフェンスの外側に置き、プレー領域には出ない。
